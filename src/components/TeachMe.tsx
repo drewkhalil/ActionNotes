@@ -135,7 +135,9 @@ Use markdown formatting for:
         throw new Error("Invalid response from OpenAI API");
       }
 
-      setLesson(response.choices[0].message.content);
+      setLesson(
+        response.choices[0].message.content ?? "⚠️ No response from AI.",
+      );
 
       incrementUsage("teach");
     } catch (error) {
