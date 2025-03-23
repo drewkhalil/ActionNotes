@@ -32,8 +32,8 @@ app.use((req, res, next) => {
   
   // Base CSP directives
   const cspDirectives = {
-    'default-src': ["'self'", "https://actionnotes.nelify.app"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.stripe.com", "https://actionnotes.nelify.app"],
+    'default-src': ["'self'", "https://actionnotes.nelify.app", "https://*.replit.dev"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.stripe.com", "https://actionnotes.nelify.app", "https://*.replit.dev"],
     'style-src': ["'self'", "'unsafe-inline'", "https://actionnotes.nelify.app"],
     'img-src': ["'self'", "data:", "https:", "https://actionnotes.nelify.app"],
     'font-src': ["'self'", "data:", "https:", "https://actionnotes.nelify.app", "https://fonts.gstatic.com"],
