@@ -130,14 +130,12 @@ Use markdown formatting for:
         ],
       });
 
-      if (!response.choices || response.choices.length === 0) {
-        throw new Error("OpenAI API returned an empty response.");
+      // ✅ No `.ok`, `.status`, or `.json()`
+      if (!response || !response.choices || response.choices.length === 0) {
+        throw new Error("Invalid response from OpenAI API");
       }
 
-      // ✅ Correct way to extract response data (avoids null issue)
-      const lessonContent =
-        response.choices[0]?.message?.content ?? "No response from AI.";
-      setLesson(lessonContent);
+      setLesson(response.choices[0].message.content);
 
       incrementUsage("teach");
     } catch (error) {
