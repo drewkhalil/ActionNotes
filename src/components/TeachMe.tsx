@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Loader2, Crown } from "lucide-react";
-import UpgradePopup from './ui/UpgradePopup';
-import { useSubscription } from '../contexts/SubscriptionContext';
-import UsageCounter from './ui/UsageCounter';
-import OpenAI from 'openai';
+import UpgradePopup from "./ui/UpgradePopup";
+import { useSubscription } from "../contexts/SubscriptionContext";
+import UsageCounter from "./ui/UsageCounter";
+import OpenAI from "openai";
 
 const teachOpenAI = new OpenAI({
-  baseURL: 'https://models.inference.ai.azure.com',
+  baseURL: "https://models.inference.ai.azure.com",
   apiKey: import.meta.env.VITE_OPENAI_TEACH_API_KEY,
-  dangerouslyAllowBrowser: true
+  dangerouslyAllowBrowser: true,
 });
 
 const TeachMe: React.FC = () => {
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lesson, setLesson] = useState('');
+  const [lesson, setLesson] = useState("");
 
   const {
     userPlan,
@@ -26,7 +26,7 @@ const TeachMe: React.FC = () => {
     checkUsageLimit,
     handleUpgrade,
     isUpgradeOpen,
-    setIsUpgradeOpen
+    setIsUpgradeOpen,
   } = useSubscription();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +34,7 @@ const TeachMe: React.FC = () => {
     if (!input.trim()) return;
 
     // Check usage limits
-    if (checkUsageLimit('teach')) {
+    if (checkUsageLimit("teach")) {
       setIsUpgradeOpen(true);
       return;
     }
@@ -121,25 +121,26 @@ Use markdown formatting for:
 - Bold text (**)
 - Italics (*)
 - Code blocks (if needed)
-- Tables (if needed)`
+- Tables (if needed)`,
           },
           {
             role: "user",
-            content: input
-          }
-        ]
+            content: input,
+          },
+        ],
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.error) {
+        throw new Error(`OpenAI API error: ${response.error.message}`);
       }
 
-      const data = await response.json();
-      setLesson(data.choices[0].message.content);
-      incrementUsage('teach');
+      // ✅ Correct way to extract response data
+      setLesson(response.choices[0].message.content);
+
+      incrementUsage("teach");
     } catch (error) {
-      console.error('Error generating lesson:', error);
-      alert('Failed to generate lesson. Please try again.');
+      console.error("Error generating lesson:", error);
+      alert("Failed to generate lesson. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -149,10 +150,15 @@ Use markdown formatting for:
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">TeachMeThat</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            TeachMeThat
+          </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-            <span>{usageCounts.teach}/{maxUsage[userPlan] === Infinity ? '∞' : maxUsage[userPlan]} uses</span>
-            {userPlan === 'free' && (
+            <span>
+              {usageCounts.teach}/
+              {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]} uses
+            </span>
+            {userPlan === "free" && (
               <Button
                 onClick={() => setIsUpgradeOpen(true)}
                 className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
@@ -164,7 +170,7 @@ Use markdown formatting for:
             )}
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 border border-gray-200 dark:border-gray-700">
           <Textarea
             value={input}
@@ -176,7 +182,7 @@ Use markdown formatting for:
             onClick={handleSubmit}
             disabled={isProcessing || !input.trim()}
             className={`w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white ${
-              isProcessing ? 'opacity-50' : ''
+              isProcessing ? "opacity-50" : ""
             }`}
           >
             {isProcessing ? (
@@ -185,7 +191,7 @@ Use markdown formatting for:
                 Generating Lesson...
               </div>
             ) : (
-              'Generate Lesson'
+              "Generate Lesson"
             )}
           </Button>
         </div>
@@ -206,4 +212,4 @@ Use markdown formatting for:
   );
 };
 
-export default TeachMe; 
+export default TeachMe;
