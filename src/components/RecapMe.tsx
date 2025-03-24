@@ -55,7 +55,7 @@ const RecapMe: React.FC = () => {
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             RecapMe
           </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
@@ -76,12 +76,12 @@ const RecapMe: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-emerald-100 dark:bg-emerald-900 rounded-xl shadow-lg p-6 border border-emerald-300 dark:border-emerald-700">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Paste your notes to generate a recap..."
-            className="w-full h-64 mb-4 bg-white dark:bg-emerald-800 text-gray-900 dark:text-white border border-emerald-300 dark:border-emerald-600"
+            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
           />
 
           <Button

@@ -64,7 +64,7 @@ const TeachMe: React.FC = () => {
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             TeachMeThat
           </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
@@ -85,12 +85,12 @@ const TeachMe: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-purple-100 dark:bg-purple-900 rounded-xl shadow-lg p-6 border border-purple-300 dark:border-purple-700">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Paste your notes to generate a recap..."
-            className="w-full h-64 mb-4 bg-white dark:bg-emerald-800 text-gray-900 dark:text-white"
+            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
           />
           <Button
             onClick={handleSubmit}
