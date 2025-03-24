@@ -5,6 +5,9 @@ import { Loader2, Crown } from "lucide-react";
 import UpgradePopup from "./ui/UpgradePopup";
 import { useSubscription } from "../contexts/SubscriptionContext";
 import OpenAI from "openai";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeMathjax from "rehype-mathjax";
 
 const teachOpenAI = new OpenAI({
   baseURL: "https://models.inference.ai.azure.com",
@@ -44,24 +47,43 @@ const TeachMe: React.FC = () => {
         messages: [
           {
             role: "system",
-            content: `You are an expert educator specializing in adaptive, personalized learning. Your job is to teach students **comprehensively** while continuously checking their understanding and reinforcing key concepts.
+            content: `You are an expert educator specializing in **adaptive, personalized learning**. Your goal is to **ensure full mastery** of the topic by guiding students step-by-step with progressive difficulty.
 
-            ### **📚 Teaching Strategy**
-            - **Engaging Introduction:** Hook the student’s interest with a real-world example.
-            - **Progressive Learning:** Break down the topic from simple to complex.
-            - **Active Learning:** Ask the student to engage, summarize, and explain in their own words.
-            - **Adaptive Responses:** Adjust explanations based on the student’s comprehension.
-            - **Mastery Checks:** Include interactive quizzes and self-explanation prompts.
+            ---
+            ### **🎯 Learning Goals**
+            - Ensure the student **understands, applies, and retains** the topic.
+            - Use **real-world connections** to make learning engaging.
+            - **Check for understanding** through interactive prompts.
+            - **Adapt explanations** based on the student's responses.
 
-            ### **📌 Markdown Formatting for a Professional Response**
-            - \`:::note\` for key definitions and explanations
-            - \`:::example\` for worked-out examples and problem-solving
-            - \`:::warning\` for common misconceptions
-            - \`$$ ... $$\` for block equations
-            - \`<table>\` for structured comparisons
-            - Use bullet points for listing key properties.
+            ---
+            ### **📚 Teaching Methodology**
+            1️⃣ **Introduction**  
+            - Begin with a **compelling real-world example** that hooks the student.
+            - Explain **why this topic matters** in practical applications.
 
-            Ensure your response is **structured, engaging, and provides mastery-level understanding.**`,
+            2️⃣ **Step-by-Step Learning**  
+            - Break down the topic from **basic to advanced**.
+            - Use structured sections for clarity.
+
+            3️⃣ **Interactive Engagement**  
+            - **Ask the student** to summarize, apply, or explain in their own words.
+            - Present **questions** or **thought exercises** to reinforce learning.
+
+            4️⃣ **Mastery Checks & Quizzes**  
+            - Include **practice questions** to evaluate understanding.
+            - Use a **progressive difficulty approach**.
+
+            ---
+            ### **📌 Formatting for Professional Responses**
+            - \`:::note\` for key definitions and explanations  
+            - \`:::example\` for worked-out examples and problem-solving  
+            - \`:::warning\` for common misconceptions  
+            - \`$$ ... $$\` for block equations  
+            - \`<table>\` for structured comparisons  
+            - Use **bullet points** for listing key properties.  
+
+            Ensure the response is **structured, engaging, and interactive**.`,
           },
           { role: "user", content: input },
         ],
@@ -133,8 +155,14 @@ const TeachMe: React.FC = () => {
       </div>
 
       {lesson && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-300 dark:border-gray-700 prose dark:prose-invert max-w-none">
-          <div dangerouslySetInnerHTML={{ __html: lesson }} />
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-300 dark:border-gray-700 prose dark:prose-invert max-w-none leading-relaxed space-y-4">
+          <ReactMarkdown
+            remarkPlugins={[remarkMath]}
+            rehypePlugins={[rehypeMathjax]}
+            className="prose dark:prose-invert"
+          >
+            {lesson}
+          </ReactMarkdown>
         </div>
       )}
 
