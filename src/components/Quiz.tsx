@@ -209,7 +209,7 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
           </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
             <span>
-              {usageCounts.quiz}/
+              {totalUsage}/
               {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]} uses
             </span>
             {userPlan === "free" && (

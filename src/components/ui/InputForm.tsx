@@ -1,9 +1,9 @@
-import React from 'react';
+import React from "react";
 import { Button } from "./button";
 import { Textarea } from "./textarea";
 import { Loader2, Crown } from "lucide-react";
-import UsageCounter from './UsageCounter';
-import { useSubscription } from '../../contexts/SubscriptionContext';
+import UsageCounter from "./UsageCounter";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 
 interface InputFormProps {
   title: string;
@@ -13,7 +13,7 @@ interface InputFormProps {
   isProcessing: boolean;
   placeholder: string;
   submitText: string;
-  feature: 'recap' | 'teach' | 'quiz';
+  feature: "recap" | "teach" | "quiz";
 }
 
 const InputForm: React.FC<InputFormProps> = ({
@@ -24,7 +24,7 @@ const InputForm: React.FC<InputFormProps> = ({
   isProcessing,
   placeholder,
   submitText,
-  feature
+  feature,
 }) => {
   const { userPlan, setIsUpgradeOpen } = useSubscription();
 
@@ -32,8 +32,10 @@ const InputForm: React.FC<InputFormProps> = ({
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h2>
-          {userPlan === 'free' && (
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {title}
+          </h2>
+          {userPlan === "free" && (
             <Button
               onClick={() => setIsUpgradeOpen(true)}
               className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
@@ -44,7 +46,7 @@ const InputForm: React.FC<InputFormProps> = ({
             </Button>
           )}
         </div>
-        <UsageCounter feature={feature} />
+        <UsageCounter />
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 border border-gray-200 dark:border-gray-700">
@@ -59,7 +61,7 @@ const InputForm: React.FC<InputFormProps> = ({
             type="submit"
             disabled={isProcessing || !inputValue.trim()}
             className={`w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white ${
-              isProcessing ? 'opacity-50' : ''
+              isProcessing ? "opacity-50" : ""
             }`}
           >
             {isProcessing ? (
@@ -77,4 +79,4 @@ const InputForm: React.FC<InputFormProps> = ({
   );
 };
 
-export default InputForm; 
+export default InputForm;
