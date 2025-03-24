@@ -1,14 +1,18 @@
-import React from 'react';
+import React from "react";
 import { Button } from "./button";
 import { X } from "lucide-react";
 
 interface UpgradePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpgrade: (plan: 'starter' | 'ultimate') => void;
+  onUpgrade: (plan: "starter" | "ultimate") => void;
 }
 
-const UpgradePopup: React.FC<UpgradePopupProps> = ({ isOpen, onClose, onUpgrade }) => {
+const UpgradePopup: React.FC<UpgradePopupProps> = ({
+  isOpen,
+  onClose,
+  onUpgrade,
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -28,9 +32,14 @@ const UpgradePopup: React.FC<UpgradePopupProps> = ({ isOpen, onClose, onUpgrade 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Starter Plan */}
           <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-6 bg-gradient-to-b from-blue-50 to-white dark:from-gray-800 dark:to-gray-900">
-            <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">Starter Plan</h3>
+            <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">
+              Starter Plan
+            </h3>
             <div className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
-              $1.99<span className="text-lg font-normal text-gray-600 dark:text-gray-400">/month</span>
+              $2.99
+              <span className="text-lg font-normal text-gray-600 dark:text-gray-400">
+                /month
+              </span>
             </div>
             <ul className="space-y-3 mb-6 text-gray-600 dark:text-gray-300">
               <li>✓ 30 uses per month</li>
@@ -38,8 +47,8 @@ const UpgradePopup: React.FC<UpgradePopupProps> = ({ isOpen, onClose, onUpgrade 
               <li>✓ Priority support</li>
               <li>✓ No ads</li>
             </ul>
-            <Button 
-              onClick={() => onUpgrade('starter')}
+            <Button
+              onClick={() => onUpgrade("starter")}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
             >
               Get Started
@@ -53,9 +62,14 @@ const UpgradePopup: React.FC<UpgradePopupProps> = ({ isOpen, onClose, onUpgrade 
                 Most Popular
               </span>
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">Ultimate Plan</h3>
+            <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">
+              Ultimate Plan
+            </h3>
             <div className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
-              $5.99<span className="text-lg font-normal text-gray-600 dark:text-gray-400">/month</span>
+              $5.99
+              <span className="text-lg font-normal text-gray-600 dark:text-gray-400">
+                /month
+              </span>
             </div>
             <ul className="space-y-3 mb-6 text-gray-600 dark:text-gray-300">
               <li>✓ Unlimited uses</li>
@@ -65,8 +79,8 @@ const UpgradePopup: React.FC<UpgradePopupProps> = ({ isOpen, onClose, onUpgrade 
               <li>✓ Advanced features</li>
               <li>✓ Early access to new features</li>
             </ul>
-            <Button 
-              onClick={() => onUpgrade('ultimate')}
+            <Button
+              onClick={() => onUpgrade("ultimate")}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
             >
               Get Ultimate
@@ -83,4 +97,4 @@ const UpgradePopup: React.FC<UpgradePopupProps> = ({ isOpen, onClose, onUpgrade 
   );
 };
 
-export default UpgradePopup; 
+export default UpgradePopup;

@@ -50,14 +50,19 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // ✅ Load usage count and plan from localStorage on mount
   useEffect(() => {
-    const savedUsage = localStorage.getItem("totalUsage");
-    const savedPlan = localStorage.getItem("userPlan") as PlanType;
-    if (savedUsage) {
-      setTotalUsage(parseInt(savedUsage));
-    }
-    if (savedPlan) {
-      setUserPlan(savedPlan);
-    }
+    const fetchUpdatedPlan = async () => {
+      try {
+        const res = await fetch("/.netlify/functions/get-user-plan");
+        if (res.ok) {
+          const data = await res.json();
+          setUserPlan(data.plan);
+        }
+      } catch (err) {
+        console.error("Failed to fetch updated plan:", err);
+      }
+    };
+
+    fetchUpdatedPlan();
   }, []);
 
   // ✅ Save usage count to localStorage whenever it changes
@@ -119,7 +124,21 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       const { error } = await stripe.redirectToCheckout({ sessionId });
-      if (error) {
+
+      if (!error) {
+        // ✅ **NEW: Fetch updated plan after successful payment**
+        setTimeout(async () => {
+          try {
+            const res = await fetch("/.netlify/functions/get-user-plan");
+            if (res.ok) {
+              const data = await res.json();
+              updatePlan(data.plan); // Update UI with new plan
+            }
+          } catch (err) {
+            console.error("Failed to fetch updated plan:", err);
+          }
+        }, 5000);
+      } else {
         throw error;
       }
     } catch (error) {

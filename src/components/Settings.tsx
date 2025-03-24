@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from './ui/card';
-import { Button } from './ui/button';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
-import { Trash2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { clearUserHistory } from '../lib/pdfUtils';
-import type { User } from '../lib/supabase';
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { Switch } from "./ui/switch";
+import { Label } from "./ui/label";
+import { Trash2 } from "lucide-react";
+import { supabase } from "../lib/supabase";
+import { clearUserHistory } from "../lib/pdfUtils";
+import type { User } from "../lib/supabase";
+import { useSubscription } from "../contexts/SubscriptionContext";
 
 interface SettingsProps {
   user: User;
@@ -19,9 +20,10 @@ interface UserPreferences {
 }
 
 export function Settings({ user, onLogout }: SettingsProps) {
+  const { userPlan, usageCounts, maxUsage, setIsUpgradeOpen } = useSubscription(); // ✅ Add this
   const [preferences, setPreferences] = useState<UserPreferences>({
     autoSave: true,
-    pdfRetentionDays: 30
+    pdfRetentionDays: 30,
   });
   const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -33,54 +35,58 @@ export function Settings({ user, onLogout }: SettingsProps) {
   const fetchPreferences = async () => {
     try {
       const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== "PGRST116") throw error;
       if (data) {
         setPreferences({
           autoSave: data.auto_save,
-          pdfRetentionDays: data.pdf_retention_days
+          pdfRetentionDays: data.pdf_retention_days,
         });
       }
     } catch (error) {
-      console.error('Error fetching preferences:', error);
+      console.error("Error fetching preferences:", error);
     }
   };
 
-  const updatePreferences = async (newPreferences: Partial<UserPreferences>) => {
+  const updatePreferences = async (
+    newPreferences: Partial<UserPreferences>,
+  ) => {
     try {
       const updatedPreferences = { ...preferences, ...newPreferences };
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          auto_save: updatedPreferences.autoSave,
-          pdf_retention_days: updatedPreferences.pdfRetentionDays,
-          updated_at: new Date().toISOString()
-        });
+      const { error } = await supabase.from("user_preferences").upsert({
+        user_id: user.id,
+        auto_save: updatedPreferences.autoSave,
+        pdf_retention_days: updatedPreferences.pdfRetentionDays,
+        updated_at: new Date().toISOString(),
+      });
 
       if (error) throw error;
       setPreferences(updatedPreferences);
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      console.error("Error updating preferences:", error);
     }
   };
 
   const handleClearHistory = async () => {
-    if (!window.confirm('Are you sure you want to clear all your history? This action cannot be undone.')) {
+    if (
+      !window.confirm(
+        "Are you sure you want to clear all your history? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
     setIsClearingHistory(true);
     try {
       await clearUserHistory(user.id);
-      alert('History cleared successfully');
+      alert("History cleared successfully");
     } catch (error) {
-      console.error('Error clearing history:', error);
-      alert('Failed to clear history. Please try again.');
+      console.error("Error clearing history:", error);
+      alert("Failed to clear history. Please try again.");
     } finally {
       setIsClearingHistory(false);
     }
@@ -91,8 +97,8 @@ export function Settings({ user, onLogout }: SettingsProps) {
     try {
       await onLogout();
     } catch (error) {
-      console.error('Error during logout:', error);
-      alert('Failed to log out. Please try again.');
+      console.error("Error during logout:", error);
+      alert("Failed to log out. Please try again.");
     } finally {
       setIsLoggingOut(false);
     }
@@ -118,7 +124,9 @@ export function Settings({ user, onLogout }: SettingsProps) {
               <Switch
                 id="auto-save"
                 checked={preferences.autoSave}
-                onCheckedChange={(checked) => updatePreferences({ autoSave: checked })}
+                onCheckedChange={(checked) =>
+                  updatePreferences({ autoSave: checked })
+                }
               />
             </div>
             <div className="flex items-center justify-between">
@@ -131,7 +139,11 @@ export function Settings({ user, onLogout }: SettingsProps) {
               <select
                 id="retention-days"
                 value={preferences.pdfRetentionDays}
-                onChange={(e) => updatePreferences({ pdfRetentionDays: Number(e.target.value) })}
+                onChange={(e) =>
+                  updatePreferences({
+                    pdfRetentionDays: Number(e.target.value),
+                  })
+                }
                 className="border rounded-md px-3 py-2"
               >
                 <option value="7">7 days</option>
@@ -159,12 +171,12 @@ export function Settings({ user, onLogout }: SettingsProps) {
                 disabled={isClearingHistory}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                {isClearingHistory ? 'Clearing...' : 'Clear History'}
+                {isClearingHistory ? "Clearing..." : "Clear History"}
               </Button>
             </div>
           </div>
 
-          {/* Account Management */}
+          {/* Account & Subscription Management */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Account</h3>
             <div className="flex items-center justify-between">
@@ -172,12 +184,38 @@ export function Settings({ user, onLogout }: SettingsProps) {
                 <Label>Email</Label>
                 <p className="text-sm text-gray-500">{user.email}</p>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleLogoutClick}
                 disabled={isLoggingOut}
               >
-                {isLoggingOut ? 'Logging out...' : 'Logout'}
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Button>
+            </div>
+
+            {/* Subscription Plan Info */}
+            <h3 className="text-lg font-semibold mt-6">Subscription</h3>
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 flex justify-between items-center">
+              <div>
+                <p className="text-sm text-gray-500">
+                  <strong>Current Plan:</strong>{" "}
+                  <span className="capitalize">{userPlan}</span>
+                </p>
+                <p className="text-sm text-gray-500">
+                  <strong>Usage:</strong>{" "}
+                  {usageCounts.recap +
+                    usageCounts.teach +
+                    usageCounts.quiz +
+                    usageCounts.flashcards}{" "}
+                  /{maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]}{" "}
+                  total uses
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsUpgradeOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Upgrade Plan
               </Button>
             </div>
           </div>
@@ -185,4 +223,4 @@ export function Settings({ user, onLogout }: SettingsProps) {
       </Card>
     </div>
   );
-} 
+}
