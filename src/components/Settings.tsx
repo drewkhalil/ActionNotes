@@ -20,7 +20,9 @@ interface UserPreferences {
 }
 
 export function Settings({ user, onLogout }: SettingsProps) {
-  const { userPlan, usageCounts, maxUsage, setIsUpgradeOpen } = useSubscription(); // ✅ Add this
+  const { userPlan, totalUsage, maxUsage, setIsUpgradeOpen } =
+    useSubscription();
+
   const [preferences, setPreferences] = useState<UserPreferences>({
     autoSave: true,
     pdfRetentionDays: 30,
@@ -202,12 +204,8 @@ export function Settings({ user, onLogout }: SettingsProps) {
                   <span className="capitalize">{userPlan}</span>
                 </p>
                 <p className="text-sm text-gray-500">
-                  <strong>Usage:</strong>{" "}
-                  {usageCounts.recap +
-                    usageCounts.teach +
-                    usageCounts.quiz +
-                    usageCounts.flashcards}{" "}
-                  /{maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]}{" "}
+                  <strong>Usage:</strong> {totalUsage} /
+                  {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]}{" "}
                   total uses
                 </p>
               </div>
