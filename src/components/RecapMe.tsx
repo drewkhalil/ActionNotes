@@ -4,6 +4,13 @@ import { Textarea } from "./ui/textarea";
 import { Loader2, Crown } from "lucide-react";
 import UpgradePopup from "./ui/UpgradePopup";
 import { useSubscription } from "../contexts/SubscriptionContext";
+import OpenAI from "openai";
+
+const recapOpenAI = new OpenAI({
+  baseURL: "https://models.inference.ai.azure.com",
+  apiKey: import.meta.env.VITE_OPENAI_RECAP_API_KEY, // Ensure this is set in .env
+  dangerouslyAllowBrowser: true,
+});
 
 const RecapMe: React.FC = () => {
   const [input, setInput] = useState("");
@@ -32,16 +39,43 @@ const RecapMe: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      const response = await fetch("/.netlify/functions/recap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input }),
+      const response = await recapOpenAI.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI assistant that specializes in summarizing study materials in a structured, professional format. Your job is to condense key concepts while ensuring **clarity, organization, and reinforcement**.
+
+            ### **📚 Recap Strategy**
+            - **Concise Summary:** Provide a structured summary covering all key points.
+            - **Main Concepts:** List fundamental ideas with bullet points.
+            - **Key Terms & Definitions:** Use \`:::note\` for defining terms.
+            - **Examples:** Provide \`:::example\` blocks for real-world applications.
+            - **Common Misconceptions:** Highlight mistakes students often make using \`:::warning\`.
+            - **Visual Organization:** Utilize tables (\`<table>\`) for structured comparisons.
+            - **Final Takeaway:** End with a **brief reinforcement of key ideas**.
+
+            ### **📌 Markdown Formatting for a Professional Recap**
+            - \`:::note\` for key definitions and explanations
+            - \`:::example\` for worked-out examples and problem-solving
+            - \`:::warning\` for common misconceptions
+            - \`$$ ... $$\` for block equations
+            - \`<table>\` for structured comparisons
+            - Use bullet points for listing key properties.
+
+            Ensure the response is **clear, structured, and easy to absorb for students.**`,
+          },
+          { role: "user", content: input },
+        ],
       });
 
-      if (!response.ok) throw new Error("Failed to generate recap");
+      if (!response || !response.choices || response.choices.length === 0) {
+        throw new Error("Invalid response from OpenAI API");
+      }
 
-      const data = await response.json();
-      setSummary(data.recap);
+      setSummary(
+        response.choices[0].message.content ?? "⚠️ No response from AI.",
+      );
       incrementUsage("recap");
     } catch (error) {
       console.error("Error generating recap:", error);
