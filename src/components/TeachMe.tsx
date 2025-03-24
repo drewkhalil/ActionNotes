@@ -89,8 +89,10 @@ const TeachMe: React.FC = () => {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Enter a topic to learn about..."
-            className="w-full h-64 mb-4 bg-white dark:bg-purple-800 text-gray-900 dark:text-white border border-purple-300 dark:border-purple-600"
+            placeholder="Paste your notes to generate a recap..."
+            className="w-full h-64 mb-4 bg-white dark:bg-emerald-800 text-gray-900 dark:text-white"
+          />
+
           />
           <Button
             onClick={handleSubmit}

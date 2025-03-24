@@ -83,6 +83,7 @@ const RecapMe: React.FC = () => {
             placeholder="Paste your notes to generate a recap..."
             className="w-full h-64 mb-4 bg-white dark:bg-emerald-800 text-gray-900 dark:text-white border border-emerald-300 dark:border-emerald-600"
           />
+
           <Button
             onClick={handleSubmit}
             disabled={isProcessing || !input.trim()}
