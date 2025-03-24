@@ -16,6 +16,12 @@ import UpgradePopup from "./ui/UpgradePopup"; // ✅ Add this
 import OpenAI from "openai";
 import "./Flashcards.css";
 
+interface Flashcard {
+  question: string;
+  answer: string;
+  bulletPoints: string[];
+}
+
 const flashcardOpenAI = new OpenAI({
   baseURL: "https://models.inference.ai.azure.com",
   apiKey: import.meta.env.VITE_OPENAI_FLASH_API_KEY,
