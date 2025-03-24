@@ -1,6 +1,6 @@
 import { Handler } from "@netlify/functions";
 import Stripe from "stripe";
-import { supabase } from "../../src/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2023-10-16",
@@ -28,14 +28,14 @@ export const handler: Handler = async (event) => {
     // 📌 Handle Stripe event types
     switch (stripeEvent.type) {
       case "checkout.session.completed": {
-        const session = stripeEvent.data.object;
+        const session = stripeEvent.data.object as Stripe.Checkout.Session;
         const customerId = session.customer as string;
-        const plan = session.metadata?.plan || "free";
+        const plan = session.metadata?.plan || "free"; // ✅ Ensure it never becomes undefined
 
         // 🔄 Update user subscription in Supabase
         const { error } = await supabase
           .from("users")
-          .update({ plan })
+          .update({ plan, stripe_customer_id: customerId }) // ✅ Ensure stripe_customer_id is stored
           .eq("stripe_customer_id", customerId);
 
         if (error) {
@@ -49,17 +49,24 @@ export const handler: Handler = async (event) => {
 
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
-        const subscription = stripeEvent.data.object;
+        const subscription = stripeEvent.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
-        const status =
-          subscription.status === "active"
-            ? subscription.items.data[0].price.id
-            : "free";
+
+        // 🔄 Map Stripe price IDs to plan names
+        const priceId = subscription.items.data[0].price.id;
+        let plan = "free"; // Default if not matched
+
+        if (priceId === process.env.STRIPE_STARTER_PRICE_ID) plan = "starter";
+        if (priceId === process.env.STRIPE_ULTIMATE_PRICE_ID) plan = "ultimate";
+
+        if (subscription.status !== "active") {
+          plan = "free"; // ✅ Ensure plan is "free" if subscription is canceled
+        }
 
         // 🔄 Update user subscription in Supabase
         const { error } = await supabase
           .from("users")
-          .update({ plan: status })
+          .update({ plan })
           .eq("stripe_customer_id", customerId);
 
         if (error) {
@@ -67,9 +74,7 @@ export const handler: Handler = async (event) => {
           return { statusCode: 500, body: "Database update failed" };
         }
 
-        console.log(
-          `✅ Subscription status updated: ${customerId} → ${status}`,
-        );
+        console.log(`✅ Subscription status updated: ${customerId} → ${plan}`);
         break;
       }
 

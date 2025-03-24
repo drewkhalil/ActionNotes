@@ -210,7 +210,7 @@ export function Settings({ user, onLogout }: SettingsProps) {
                 </p>
               </div>
               <Button
-                onClick={() => setIsUpgradeOpen(true)}
+                onClick={() => setIsUpgradeOpen(true)} // ✅ Opens the same popup as crown button
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Upgrade Plan

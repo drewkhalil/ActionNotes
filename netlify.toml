@@ -53,6 +53,7 @@ port = 8888
   status = 200
   force = true
 
-[functions]  # ✅ Fixed syntax
+[functions]  # ✅ Combined into one
   directory = "netlify/functions"
   external_node_modules = ["openai", "stripe"]
+  node_bundler = "esbuild"  # ✅ Ensure ESM support

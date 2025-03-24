@@ -66,6 +66,7 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
+        format: "esm", // ✅ Force ES Module output
         manualChunks: {
           vendor: ["react", "react-dom"],
         },
