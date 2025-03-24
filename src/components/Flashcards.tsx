@@ -40,7 +40,7 @@ const Flashcards: React.FC = () => {
   // ✅ Import subscription context for usage limits
   const {
     userPlan,
-    usageCounts,
+    totalUsage,
     maxUsage,
     incrementUsage,
     checkUsageLimit,
@@ -80,7 +80,7 @@ const Flashcards: React.FC = () => {
       return;
 
     // ✅ Check usage limit
-    if (checkUsageLimit("flashcards")) {
+    if (checkUsageLimit()) {
       setIsUpgradeOpen(true);
       return;
     }

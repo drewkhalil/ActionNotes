@@ -19,7 +19,7 @@ const RecapMe: React.FC = () => {
 
   const {
     userPlan,
-    usageCounts,
+    totalUsage,
     maxUsage,
     incrementUsage,
     checkUsageLimit,
@@ -32,7 +32,7 @@ const RecapMe: React.FC = () => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    if (checkUsageLimit("recap")) {
+    if (checkUsageLimit()) {
       setIsUpgradeOpen(true);
       return;
     }

@@ -46,7 +46,7 @@ const Quiz = () => {
 
   const {
     userPlan,
-    usageCounts,
+    totalUsage,
     maxUsage,
     incrementUsage,
     checkUsageLimit,
@@ -71,7 +71,7 @@ const Quiz = () => {
     if (!input.trim()) return;
 
     // Check usage limits
-    if (checkUsageLimit("quiz")) {
+    if (checkUsageLimit()) {
       setIsUpgradeOpen(true);
       return;
     }

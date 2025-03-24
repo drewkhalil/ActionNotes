@@ -19,7 +19,7 @@ const TeachMe: React.FC = () => {
 
   const {
     userPlan,
-    usageCounts,
+    totalUsage,
     maxUsage,
     incrementUsage,
     checkUsageLimit,
@@ -32,7 +32,7 @@ const TeachMe: React.FC = () => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    if (checkUsageLimit("teach")) {
+    if (checkUsageLimit()) {
       setIsUpgradeOpen(true);
       return;
     }
