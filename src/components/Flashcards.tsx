@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -11,10 +10,9 @@ import {
   Shuffle,
   Crown,
 } from "lucide-react";
-import { useSubscription } from "../contexts/SubscriptionContext"; // ✅ Add this
-import UpgradePopup from "./ui/UpgradePopup"; // ✅ Add this
+import { useSubscription } from "../contexts/SubscriptionContext";
+import UpgradePopup from "./ui/UpgradePopup";
 import OpenAI from "openai";
-import "./Flashcards.css";
 
 interface Flashcard {
   question: string;
@@ -51,6 +49,29 @@ const Flashcards: React.FC = () => {
     setIsUpgradeOpen,
   } = useSubscription();
 
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (flashcards.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowLeft":
+          previousCard();
+          break;
+        case "ArrowRight":
+          nextCard();
+          break;
+        case "Enter":
+          if (isFlipped) {
+            nextCard();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [currentIndex, isFlipped, flashcards.length]);
+
   const generateFlashcards = async () => {
     if (
       (inputType === "topic" && !topic.trim()) ||
@@ -83,11 +104,7 @@ const Flashcards: React.FC = () => {
       });
 
       const content = response.choices[0].message.content || "[]";
-      const cleanedContent = content
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-      setFlashcards(JSON.parse(cleanedContent));
+      setFlashcards(JSON.parse(content));
 
       // ✅ Increment usage after successful flashcard generation
       incrementUsage("flashcards");
@@ -100,6 +117,20 @@ const Flashcards: React.FC = () => {
       alert("Failed to generate flashcards. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const nextCard = () => {
+    if (currentIndex < flashcards.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsFlipped(false);
+    }
+  };
+
+  const previousCard = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setIsFlipped(false);
     }
   };
 
@@ -128,10 +159,94 @@ const Flashcards: React.FC = () => {
           </div>
         </div>
 
-        {/* UI Components */}
+        {/* ✅ Input Fields for Topic and Notes */}
+        <div className="mb-4 flex gap-4">
+          <Button
+            onClick={() => setInputType("topic")}
+            variant={inputType === "topic" ? "primary" : "outline"}
+            className="flex-1"
+          >
+            Topic
+          </Button>
+          <Button
+            onClick={() => setInputType("notes")}
+            variant={inputType === "notes" ? "primary" : "outline"}
+            className="flex-1"
+          >
+            Notes
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {inputType === "topic" ? (
+            <Input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="Enter a topic..."
+              className="w-full"
+            />
+          ) : (
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Enter your notes..."
+              className="w-full h-32 resize-none"
+            />
+          )}
+          <Button
+            onClick={generateFlashcards}
+            disabled={
+              isLoading ||
+              (inputType === "topic" ? !topic.trim() : !notes.trim())
+            }
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              "Generate Flashcards"
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Upgrade Popup */}
+      {/* ✅ Flashcards Display */}
+      {flashcards.length > 0 && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <div className="text-lg font-semibold mb-2">
+              {flashcards[currentIndex].question}
+            </div>
+            {isFlipped && (
+              <div className="text-gray-700 dark:text-gray-300">
+                {flashcards[currentIndex].answer}
+              </div>
+            )}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between">
+            <Button onClick={previousCard} disabled={currentIndex === 0}>
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button onClick={() => setIsFlipped(!isFlipped)}>Flip</Button>
+            <Button
+              onClick={nextCard}
+              disabled={currentIndex === flashcards.length - 1}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Upgrade Popup */}
       <UpgradePopup
         isOpen={isUpgradeOpen}
         onClose={() => setIsUpgradeOpen(false)}
