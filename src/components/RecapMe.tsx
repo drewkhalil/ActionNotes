@@ -76,7 +76,7 @@ const RecapMe: React.FC = () => {
       setSummary(
         response.choices[0].message.content ?? "⚠️ No response from AI.",
       );
-      incrementUsage("recap");
+      incrementUsage();
     } catch (error) {
       console.error("Error generating recap:", error);
       alert("Failed to generate recap. Please try again.");

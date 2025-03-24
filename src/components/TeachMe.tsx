@@ -74,7 +74,7 @@ const TeachMe: React.FC = () => {
       setLesson(
         response.choices[0].message.content ?? "⚠️ No response from AI.",
       );
-      incrementUsage("teach");
+      incrementUsage();
     } catch (error) {
       console.error("Error generating lesson:", error);
       alert("Failed to generate lesson. Please try again.");

@@ -107,7 +107,7 @@ const Flashcards: React.FC = () => {
       setFlashcards(JSON.parse(content));
 
       // ✅ Increment usage after successful flashcard generation
-      incrementUsage("flashcards");
+      incrementUsage();
 
       setCurrentIndex(0);
       setIsFlipped(false);
