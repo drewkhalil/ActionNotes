@@ -1,11 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";
+import { NextApiRequest, NextApiResponse } from "next";
 import Cors from "cors";
-
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2023-10-16", // Use your desired API version
-});
 
 // Initialize CORS
 const cors = Cors({
@@ -14,7 +10,11 @@ const cors = Cors({
 });
 
 // Helper function to run middleware
-const runCors = (req, res, next) => cors(req, res, next);
+const runCors = (
+  req: NextApiRequest,
+  res: NextApiResponse,
+  next: (err?: any) => void,
+) => cors(req, res, next);
 
 // API handler function
 export default async function handler(
@@ -23,7 +23,7 @@ export default async function handler(
 ) {
   // Run CORS before handling the rest of your logic
   await new Promise((resolve, reject) =>
-    runCors(req, res, (result) => {
+    runCors(req, res, (result: any) => {
       if (result instanceof Error) {
         return reject(result);
       }
