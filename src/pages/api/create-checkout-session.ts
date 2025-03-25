@@ -1,12 +1,15 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import Stripe from "stripe";
-import { NextApiRequest, NextApiResponse } from "next";
 import Cors from "cors";
+import Stripe from "stripe";
 
 // Initialize CORS
 const cors = Cors({
   methods: ["GET", "POST", "OPTIONS"],
   origin: "https://actionnotes.netlify.app", // Allow only requests from your Netlify app
+});
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: "2025-02-24.acacia",
 });
 
 // Helper function to run middleware
