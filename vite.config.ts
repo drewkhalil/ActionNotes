@@ -50,7 +50,7 @@ export default defineConfig({
     },
     headers: {
       "Content-Security-Policy":
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.stripe.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: blob: https: https://fonts.gstatic.com data:; connect-src 'self' https://api.stripe.com http://localhost:4242 https://models.inference.ai.azure.com https://*.stripe.com https://bmuvsbafvrvsgdplhvgp.supabase.co https://*.supabase.co wss://bmuvsbafvrvsgdplhvgp.supabase.co https://cdnjs.cloudflare.com; frame-src 'self' https://*.stripe.com; script-src-elem 'self' 'unsafe-inline' https://*.stripe.com https://cdnjs.cloudflare.com",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.stripe.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: blob: https: https://fonts.gstatic.com data:; connect-src 'self' https://api.stripe.com https://actionnotes-production.up.railway.app/api/create-checkout-session https://models.inference.ai.azure.com https://*.stripe.com https://bmuvsbafvrvsgdplhvgp.supabase.co https://*.supabase.co wss://bmuvsbafvrvsgdplhvgp.supabase.co https://cdnjs.cloudflare.com; frame-src 'self' https://*.stripe.com; script-src-elem 'self' 'unsafe-inline' https://*.stripe.com https://cdnjs.cloudflare.com",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "X-XSS-Protection": "1; mode=block",
