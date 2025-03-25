@@ -25,7 +25,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  preflightContinue: true  // Allow handling of OPTIONS requests
 }));
 
 app.use(express.json());
