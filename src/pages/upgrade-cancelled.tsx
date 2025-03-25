@@ -1,35 +1,32 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { XCircle } from 'lucide-react';
+import type { NextApiRequest, NextApiResponse } from "next";
+import { supabase } from "@/lib/supabase";
 
-const UpgradeCancelled: React.FC = () => {
-  const navigate = useNavigate();
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
+  try {
+    const { user_id } = req.query;
 
-  useEffect(() => {
-    // Redirect after 3 seconds
-    const timer = setTimeout(() => {
-      navigate('/');
-    }, 3000);
+    if (!user_id || typeof user_id !== "string") {
+      return res.status(400).json({ error: "Missing or invalid user ID" });
+    }
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    // 🔄 Fetch user plan from Supabase
+    const { data, error } = await supabase
+      .from("users")
+      .select("plan")
+      .eq("id", user_id)
+      .single();
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-md w-full mx-4 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg text-center">
-        <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          Upgrade Cancelled
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Your upgrade process was cancelled. No charges were made.
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          You will be redirected to the homepage in a few seconds.
-        </p>
-      </div>
-    </div>
-  );
-};
+    if (error) {
+      console.error("Failed to fetch user plan:", error);
+      return res.status(500).json({ error: "Database error" });
+    }
 
-export default UpgradeCancelled; 
+    return res.status(200).json({ plan: data.plan });
+  } catch (error) {
+    console.error("Error fetching user plan:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}

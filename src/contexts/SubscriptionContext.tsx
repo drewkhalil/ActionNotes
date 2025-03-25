@@ -5,14 +5,14 @@ type PlanType = "free" | "starter" | "ultimate";
 
 interface SubscriptionContextType {
   userPlan: PlanType;
-  totalUsage: number; // ✅ Use a single counter for all tools
+  totalUsage: number;
   maxUsage: {
     free: number;
     starter: number;
     ultimate: number;
   };
-  incrementUsage: () => void; // ✅ Updated to track all usage
-  checkUsageLimit: () => boolean; // ✅ Updated to check total usage
+  incrementUsage: () => void;
+  checkUsageLimit: () => boolean;
   handleUpgrade: (plan: PlanType) => Promise<void>;
   isUpgradeOpen: boolean;
   setIsUpgradeOpen: (isOpen: boolean) => void;
@@ -33,26 +33,27 @@ export const useSubscription = (): SubscriptionContextType => {
   return context;
 };
 
-const API_URL = import.meta.env.VITE_BACKEND_URL;
-
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [userPlan, setUserPlan] = useState<PlanType>("free");
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
-  const [totalUsage, setTotalUsage] = useState(0); // ✅ Single counter
+  const [totalUsage, setTotalUsage] = useState(0);
 
   const maxUsage = {
-    free: 4, // ✅ Increased from 3 → 4 per week
+    free: 4,
     starter: 30,
     ultimate: Infinity,
   };
 
-  // ✅ Load usage count and plan from localStorage on mount
+  // ✅ Load user plan from API
   useEffect(() => {
     const fetchUpdatedPlan = async () => {
       try {
-        const res = await fetch("/.netlify/functions/get-user-plan");
+        const userId = localStorage.getItem("user_id"); // ✅ Get user ID
+        if (!userId) return;
+
+        const res = await fetch(`/api/get-user-plan?user_id=${userId}`);
         if (res.ok) {
           const data = await res.json();
           setUserPlan(data.plan);
@@ -65,12 +66,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchUpdatedPlan();
   }, []);
 
-  // ✅ Save usage count to localStorage whenever it changes
+  // ✅ Save usage count
   useEffect(() => {
     localStorage.setItem("totalUsage", totalUsage.toString());
   }, [totalUsage]);
 
-  // ✅ Reset usage count weekly for free users
+  // ✅ Reset usage weekly
   useEffect(() => {
     if (userPlan === "free") {
       const lastReset = localStorage.getItem("lastUsageReset");
@@ -82,12 +83,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [userPlan]);
 
-  // ✅ Increment total usage
   const incrementUsage = () => {
     setTotalUsage((prev) => prev + 1);
   };
 
-  // ✅ Check if total usage exceeds the limit
   const checkUsageLimit = () => {
     return totalUsage >= maxUsage[userPlan];
   };
@@ -95,22 +94,20 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   const updatePlan = (newPlan: PlanType) => {
     setUserPlan(newPlan);
     localStorage.setItem("userPlan", newPlan);
-    setTotalUsage(0); // ✅ Reset usage count on upgrade
+    setTotalUsage(0);
     localStorage.setItem("totalUsage", "0");
   };
 
   const handleUpgrade = async (plan: PlanType) => {
     try {
-      const response = await fetch(
-        `/.netlify/functions/create-checkout-session`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ plan }),
+      const response = await fetch(`/api/create-checkout-session`, {
+        // ✅ FIXED
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ plan }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to create checkout session");
@@ -126,13 +123,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
       const { error } = await stripe.redirectToCheckout({ sessionId });
 
       if (!error) {
-        // ✅ **NEW: Fetch updated plan after successful payment**
         setTimeout(async () => {
           try {
-            const res = await fetch("/.netlify/functions/get-user-plan");
+            const userId = localStorage.getItem("user_id"); // ✅ Ensure userId is used
+            if (!userId) return;
+
+            const res = await fetch(`/api/get-user-plan?user_id=${userId}`);
             if (res.ok) {
               const data = await res.json();
-              updatePlan(data.plan); // Update UI with new plan
+              updatePlan(data.plan);
             }
           } catch (err) {
             console.error("Failed to fetch updated plan:", err);
