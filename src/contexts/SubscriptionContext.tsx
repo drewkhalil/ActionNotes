@@ -100,7 +100,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const handleUpgrade = async (plan: PlanType) => {
     try {
-      const response = await fetch(`/api/create-checkout-session`, {
+      const API_URL = import.meta.env.VITE_BACKEND_URL;
+      const response = await fetch(`${API_URL}/api/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
