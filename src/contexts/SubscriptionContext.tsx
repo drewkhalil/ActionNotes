@@ -101,11 +101,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleUpgrade = async (plan: PlanType) => {
     try {
       const response = await fetch(`/api/create-checkout-session`, {
-        // ✅ FIXED
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
 
