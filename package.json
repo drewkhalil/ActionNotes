@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "node server.mjs",
     "update-browserslist": "npx update-browserslist-db@latest",
     "postinstall": "npx update-browserslist-db@latest",
     "dev": "concurrently \"node server.mjs\" \"vite\"",
