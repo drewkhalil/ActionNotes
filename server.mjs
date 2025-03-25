@@ -30,7 +30,8 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: ["https://actionnotes.netlify.app", "http://localhost:5173", "https://actionnotes-production.up.railway.app/api/create-checkout-session"],
+  // origin: ["https://actionnotes.netlify.app", "http://localhost:5173", "https://actionnotes-production.up.railway.app/api/create-checkout-session"],
+  origin: "*",
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
