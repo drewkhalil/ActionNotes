@@ -23,13 +23,22 @@ export const Checkout: React.FC<CheckoutProps> = ({ planName, price }) => {
         `${import.meta.env.VITE_BACKEND_URL}/create-checkout-session`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          credentials: "include",
           body: JSON.stringify({
             userId,
             plan: planName,
           }),
         },
       );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Checkout failed: ${errorData}`);
+      }
 
       const { sessionId } = await response.json();
       const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
