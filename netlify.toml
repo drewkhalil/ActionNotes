@@ -18,6 +18,7 @@ port = 8888
       img-src 'self' data: https:;
       font-src 'self' data: blob: https: https://fonts.gstatic.com data:;
       connect-src 'self' 
+        https://actionnotes-production.up.railway.app/api/create-checkout-session
         https://actionnotes-production.up.railway.app 
         https://api.stripe.com 
         https://*.stripe.com 
