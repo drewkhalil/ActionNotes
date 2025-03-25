@@ -1,6 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
+import { loadStripe } from "@stripe/stripe-js";
 
 interface CheckoutProps {
   planName: "starter" | "ultimate";
@@ -19,21 +19,24 @@ export const Checkout: React.FC<CheckoutProps> = ({ planName, price }) => {
         return;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          plan: planName
-        })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/create-checkout-session`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            plan: planName,
+          }),
+        },
+      );
 
       const { sessionId } = await response.json();
       const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
       await stripe?.redirectToCheckout({ sessionId });
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to start checkout process');
+      console.error("Error:", error);
+      alert("Failed to start checkout process");
     } finally {
       setIsLoading(false);
     }
@@ -41,14 +44,12 @@ export const Checkout: React.FC<CheckoutProps> = ({ planName, price }) => {
 
   return (
     <div className="flex flex-col gap-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-      <h3 className="text-xl font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)} Plan</h3>
+      <h3 className="text-xl font-semibold">
+        {planName.charAt(0).toUpperCase() + planName.slice(1)} Plan
+      </h3>
       <p className="text-lg">${price}/month</p>
-      <Button 
-        onClick={handleCheckout}
-        disabled={isLoading}
-        className="w-full"
-      >
-        {isLoading ? 'Processing...' : 'Subscribe Now'}
+      <Button onClick={handleCheckout} disabled={isLoading} className="w-full">
+        {isLoading ? "Processing..." : "Subscribe Now"}
       </Button>
     </div>
   );
