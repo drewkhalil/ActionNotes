@@ -1,8 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, Session } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
 // Get the current environment
 const isDevelopment = import.meta.env.DEV;
+console.log('isDevelopment', isDevelopment);
 
 // Use the appropriate URL based on environment
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -81,3 +82,31 @@ export async function updateUsageCount(userId: string) {
     throw error;
   }
 }
+
+// Subscribing to auth state changes
+const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
+  console.log(`Auth event: ${event}`);
+
+  if (event === 'SIGNED_IN') {
+    console.log('User signed in:', session?.user);
+  } else if (event === 'SIGNED_OUT') {
+    console.log('User signed out.');
+    window.location.href = '/login';
+  } else if (event === 'TOKEN_REFRESHED') {
+    console.log('Auth token refreshed:', session);
+  } else if (event === 'USER_UPDATED') {
+    console.log('User profile updated:', session?.user);
+  }
+});
+
+// Fetching the current session when the application initializes
+supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+  if (session) {
+    console.log('Existing session detected:', session);
+  } else {
+    console.log('No active session found. User is logged out.');
+    window.location.href = '/login';
+  }
+}).catch((error) => {
+  console.error('Error fetching session:', error);
+});
