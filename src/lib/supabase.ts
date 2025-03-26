@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // Get the current environment
 const isDevelopment = import.meta.env.DEV;
