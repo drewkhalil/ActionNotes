@@ -6,22 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
-const REQUIRED_ENV_VARS = [
-  "STRIPE_SECRET_KEY",
-  "STRIPE_WEBHOOK_SECRET",
-  "VITE_SUPABASE_URL",
-  "VITE_SUPABASE_ANON_KEY",
-  "VITE_STRIPE_STARTER_PRICE_ID",
-  "VITE_STRIPE_ULTIMATE_PRICE_ID",
-  "NEXT_PUBLIC_SITE_URL",
-];
-
-REQUIRED_ENV_VARS.forEach(varName => {
-  if (!process.env[varName]) {
-    console.error(`❌ Missing environment variable: ${varName}`);
-    process.exit(1);
-  }
-});
+const supabaseUrl = process.env.SUPABASE_URL; // Make sure this is set
+const supabaseKey = process.env.SUPABASE_KEY; // Make sure this is set
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
