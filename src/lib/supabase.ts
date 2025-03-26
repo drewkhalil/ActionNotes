@@ -7,8 +7,8 @@ const isDevelopment = import.meta.env.DEV;
 console.log('isDevelopment', isDevelopment);
 
 // Use the appropriate URL based on environment
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase credentials');
