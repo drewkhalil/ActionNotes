@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase';
 import { Session } from '@supabase/supabase-js';
+import dotenv from "dotenv";
 
 // Get the current environment
-const isDevelopment = process.env.DEV;
+const isDevelopment = import.meta.env.DEV;
 console.log('isDevelopment', isDevelopment);
 
 // Use the appropriate URL based on environment
