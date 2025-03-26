@@ -8,7 +8,8 @@ console.log('isDevelopment', isDevelopment);
 
 // Use the appropriate URL based on environment
 const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtdXZzYmFmdnJ2c2dkcGxodmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0OTY1ODIsImV4cCI6MjA1ODA3MjU4Mn0.rn_nhW2ongqXl2BoGY1wDGN7c0ojmd1iNX_xBQs3PBo'
+// const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) {
   throw new Error('Missing Supabase URL');
