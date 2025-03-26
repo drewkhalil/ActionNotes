@@ -23,7 +23,8 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-app.options('*', cors()); // ✅ Handles preflight requests
+// Handle OPTIONS preflight request for specific route
+app.options('/create-checkout-session', cors());
 
 // Webhook must come before express.json()
 app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
