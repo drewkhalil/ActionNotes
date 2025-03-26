@@ -10,8 +10,12 @@ console.log('isDevelopment', isDevelopment);
 const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase credentials');
+if (!supabaseUrl) {
+  throw new Error('Missing Supabase URL');
+}
+
+if (!supabaseKey) {
+  throw new Error('Missing Supabase Key');
 }
 
 const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
