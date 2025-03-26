@@ -6,6 +6,16 @@ import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
+// Error handling for uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+// Error handling for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
 const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
 const supabaseKey = process.env.SUPABASE_KEY; // Make sure this is set
 
@@ -80,5 +90,7 @@ app.post('/create-checkout-session', async (req, res) => {
 
 const PORT = process.env.PORT || 4242;
 app.listen(PORT, "0.0.0.0", () => {
+  console.log('Server is starting...');
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+  
 });
