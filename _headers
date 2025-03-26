@@ -1,4 +1,9 @@
-/api/*
-  Access-Control-Allow-Origin: https://actionnotes.netlify.app
-  Access-Control-Allow-Methods: GET, POST, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization
+   return {
+     statusCode: 200,
+     body: "Success",
+     headers: {
+       "Access-Control-Allow-Origin": "*", // Allow all origins or specify your frontend URL
+       "Access-Control-Allow-Methods": "GET, POST, OPTIONS", // Specify allowed methods
+       "Access-Control-Allow-Headers": "Content-Type, Authorization", // Specify allowed headers
+     },
+   };

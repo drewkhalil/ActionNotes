@@ -82,7 +82,15 @@ export const handler: Handler = async (event) => {
         console.log(`Unhandled event type: ${stripeEvent.type}`);
     }
 
-    return { statusCode: 200, body: "Success" };
+    return {
+      statusCode: 200,
+      body: "Success",
+      headers: {
+        "Access-Control-Allow-Origin": "*", // Allow all origins or specify your frontend URL
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS", // Specify allowed methods
+        "Access-Control-Allow-Headers": "Content-Type, Authorization", // Specify allowed headers
+      },
+    };
   } catch (error) {
     console.error("Error processing webhook:", error);
     return { statusCode: 500, body: "Internal Server Error" };
