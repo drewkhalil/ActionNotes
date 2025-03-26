@@ -16,11 +16,14 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: "https://actionnotes.netlify.app", // ✅ Allow only your frontend
-  methods: "GET,POST,PUT,DELETE",
-  allowedHeaders: "Content-Type,Authorization",
+  origin: ["https://actionnotes.netlify.app", "http://localhost:5173"], // ✅ Add Netlify & local dev environment
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
+  optionsSuccessStatus: 204
 }));
+
+app.options('*', cors()); // ✅ Handles preflight requests
 
 // Webhook must come before express.json()
 app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
