@@ -3,12 +3,12 @@ import type { Database } from '../types/supabase';
 import { Session } from '@supabase/supabase-js';
 
 // Get the current environment
-const isDevelopment = import.meta.env.DEV;
+const isDevelopment = process.env.DEV;
 console.log('isDevelopment', isDevelopment);
 
 // Use the appropriate URL based on environment
 const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase credentials');
