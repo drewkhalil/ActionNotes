@@ -5,14 +5,14 @@ import type { Database } from '../types/supabase';
 const isDevelopment = import.meta.env.DEV;
 
 // Use the appropriate URL based on environment
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase credentials');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -27,6 +27,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     schema: 'public'
   }
 });
+
+export default supabase;
 
 export type User = Database['public']['Tables']['users']['Row'];
 export type Profile = Database['public']['Tables']['profiles']['Row'];

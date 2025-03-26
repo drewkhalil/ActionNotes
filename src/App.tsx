@@ -12,7 +12,7 @@ import { Settings } from './components/Settings';
 import { History as HistoryComponent } from './components/History';
 import Flashcards from './components/Flashcards';
 import Quiz from './components/Quiz';
-import { supabase } from './lib/supabase';
+import supabase from './lib/supabase';
 import type { User } from './lib/supabase';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import TeachMe from './components/TeachMe';

@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Trash2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import supabase from "@/lib/supabase";
 import type { User } from '../lib/supabase';
 
 interface HistoryItem {
