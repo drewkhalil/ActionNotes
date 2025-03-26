@@ -76,8 +76,8 @@ app.post('/create-checkout-session', async (req, res) => {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.FRONTEND_URL}?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}?canceled=true`,
       metadata: { userId, plan }
     });
 
