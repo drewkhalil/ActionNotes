@@ -13,7 +13,7 @@ const REQUIRED_ENV_VARS = [
   "SUPABASE_ANON_KEY",
   "STRIPE_STARTER_PRICE_ID",
   "STRIPE_ULTIMATE_PRICE_ID",
-  "FRONTEND_URL"
+  "PUBLIC_SITE_URL",
 ];
 
 REQUIRED_ENV_VARS.forEach(varName => {
@@ -30,8 +30,7 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  // origin: ["https://actionnotes.netlify.app", "http://localhost:5173", "https://actionnotes-production.up.railway.app/api/create-checkout-session"],
-  origin: "*",
+  origin: ["https://actionnotes.netlify.app", "http://localhost:5173", "https://actionnotes-production.up.railway.app/api/create-checkout-session"],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
