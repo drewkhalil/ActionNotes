@@ -1,4 +1,4 @@
-import { createClient, Session } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase';
 
 // Get the current environment

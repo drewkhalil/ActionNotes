@@ -6,11 +6,11 @@ import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL; // Make sure this is set
+const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
 const supabaseKey = process.env.SUPABASE_KEY; // Make sure this is set
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 const app = express();
 
