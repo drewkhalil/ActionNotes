@@ -6,8 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = "https://bmuvsbafvrvsgdplhvgp.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtdXZzYmFmdnJ2c2dkcGxodmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY3MjYxNjMsImV4cCI6MjAyMjMwMjE2M30";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
 const supabase = createClient(supabaseUrl, supabaseKey);
 
