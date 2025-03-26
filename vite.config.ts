@@ -2,6 +2,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { supabase } from "../lib/supabase"; // Adjust the path as necessary
 
 export default defineConfig({
   cacheDir: "./.vite_cache",
