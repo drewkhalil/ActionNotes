@@ -12,7 +12,7 @@ import { Settings } from './components/Settings';
 import { History as HistoryComponent } from './components/History';
 import Flashcards from './components/Flashcards';
 import Quiz from './components/Quiz';
-import supabase from './lib/supabase';
+import { supabase } from './lib/supabase';
 import type { User } from './lib/supabase';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import TeachMe from './components/TeachMe';
@@ -23,6 +23,43 @@ import MathJax from 'react-mathjax2';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 function App() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session check:', session);
+        if (session?.user) {
+          setUser(session.user);
+          localStorage.setItem('userId', session.user.id);
+        } else {
+          console.log('No active session found. User is logged out.');
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        localStorage.setItem('userId', session.user.id);
+      } else {
+        localStorage.removeItem('userId');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
+
   return (
     <SubscriptionProvider>
       <Elements stripe={stripePromise}>
@@ -50,28 +87,6 @@ function MainApp() {
   const [recentSummaries] = useState<Summary[]>([
     { sections: [{ title: "Recent Summary 1", content: ["Content from your last summary..."] }], timestamp: "2024-03-10 14:30" }
   ]);
-
-  useEffect(() => {
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        localStorage.setItem('userId', session.user.id);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        localStorage.setItem('userId', session.user.id);
-      } else {
-        localStorage.removeItem('userId');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -642,111 +657,111 @@ function MainApp() {
     }
   };
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
-
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? "bg-gray-900 text-gray-300" : "bg-gray-50 text-gray-900"}`}>
-      {/* Sidebar */}
-      <div
-        id="sidebar"
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Action Notes</h2>
-          </div>
-          <nav className="flex-1 p-4 space-y-2">
-            <button
-              onClick={() => setActiveView('main')}
-              className={getSidebarLinkClasses(activeView === 'main')}
-            >
-              <Home className="h-5 w-5 mr-2" />
-              Home
-            </button>
-            <button
-              onClick={() => setActiveView('teach')}
-              className={getSidebarLinkClasses(activeView === 'teach')}
-            >
-              <BookOpen className="h-5 w-5 mr-2" />
-              TeachMeThat
-            </button>
-            <button
-              onClick={() => setActiveView('recap')}
-              className={getSidebarLinkClasses(activeView === 'recap')}
-            >
-              <FileText className="h-5 w-5 mr-2" />
-              RecapMe
-            </button>
-            <button
-              onClick={() => setActiveView('flashcards')}
-              className={getSidebarLinkClasses(activeView === 'flashcards')}
-            >
-              <Bookmark className="h-5 w-5 mr-2" />
-              Flashcards
-            </button>
-            <button
-              onClick={() => setActiveView('quiz')}
-              className={getSidebarLinkClasses(activeView === 'quiz')}
-            >
-              <PenSquare className="h-5 w-5 mr-2" />
-              Quiz Generator
-            </button>
-            <button
-              onClick={() => setActiveView('history')}
-              className={getSidebarLinkClasses(activeView === 'history')}
-            >
-              <History className="h-5 w-5 mr-2" />
-              History
-            </button>
-            <button
-              onClick={() => setActiveView('settings')}
-              className={getSidebarLinkClasses(activeView === 'settings')}
-            >
-              <SettingsIcon className="h-5 w-5 mr-2" />
-              Settings
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        <header className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="flex items-center justify-between px-4 py-3">
-            <button
-              id="hamburger-button"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                {isDarkMode ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
-              </button>
+    <SubscriptionProvider>
+      <Elements stripe={stripePromise}>
+        <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? "bg-gray-900 text-gray-300" : "bg-gray-50 text-gray-900"}`}>
+          {/* Sidebar */}
+          <div
+            id="sidebar"
+            className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 ease-in-out ${
+              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex flex-col h-full">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Action Notes</h2>
+              </div>
+              <nav className="flex-1 p-4 space-y-2">
+                <button
+                  onClick={() => setActiveView('main')}
+                  className={getSidebarLinkClasses(activeView === 'main')}
+                >
+                  <Home className="h-5 w-5 mr-2" />
+                  Home
+                </button>
+                <button
+                  onClick={() => setActiveView('teach')}
+                  className={getSidebarLinkClasses(activeView === 'teach')}
+                >
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  TeachMeThat
+                </button>
+                <button
+                  onClick={() => setActiveView('recap')}
+                  className={getSidebarLinkClasses(activeView === 'recap')}
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  RecapMe
+                </button>
+                <button
+                  onClick={() => setActiveView('flashcards')}
+                  className={getSidebarLinkClasses(activeView === 'flashcards')}
+                >
+                  <Bookmark className="h-5 w-5 mr-2" />
+                  Flashcards
+                </button>
+                <button
+                  onClick={() => setActiveView('quiz')}
+                  className={getSidebarLinkClasses(activeView === 'quiz')}
+                >
+                  <PenSquare className="h-5 w-5 mr-2" />
+                  Quiz Generator
+                </button>
+                <button
+                  onClick={() => setActiveView('history')}
+                  className={getSidebarLinkClasses(activeView === 'history')}
+                >
+                  <History className="h-5 w-5 mr-2" />
+                  History
+                </button>
+                <button
+                  onClick={() => setActiveView('settings')}
+                  className={getSidebarLinkClasses(activeView === 'settings')}
+                >
+                  <SettingsIcon className="h-5 w-5 mr-2" />
+                  Settings
+                </button>
+              </nav>
             </div>
           </div>
-        </header>
 
-        <main className="container mx-auto px-4 py-8">
-          {activeView === 'settings' ? (
-            <Settings user={user} onLogout={handleLogout} />
-          ) : (
-            renderMainContent()
-          )}
-        </main>
-      </div>
+          {/* Main Content */}
+          <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+            <header className="bg-white dark:bg-gray-800 shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3">
+                <button
+                  id="hamburger-button"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <Menu className="h-6 w-6" />
+                </button>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    {isDarkMode ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
+                  </button>
+                </div>
+              </div>
+            </header>
 
-      {/* Pricing Modal */}
-      {showPricingModal && <PricingModal show={showPricingModal} setShow={setShowPricingModal} />}
-    </div>
+            <main className="container mx-auto px-4 py-8">
+              {activeView === 'settings' ? (
+                <Settings user={user} onLogout={handleLogout} />
+              ) : (
+                renderMainContent()
+              )}
+            </main>
+          </div>
+
+          {/* Pricing Modal */}
+          {showPricingModal && <PricingModal show={showPricingModal} setShow={setShowPricingModal} />}
+        </div>
+      </Elements>
+    </SubscriptionProvider>
   );
 }
 

@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Trash2 } from "lucide-react";
-import supabase from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { clearUserHistory } from "../lib/pdfUtils";
 import type { User } from "../lib/supabase";
 import { useSubscription } from "../contexts/SubscriptionContext";

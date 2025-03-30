@@ -1,5 +1,6 @@
 import React from "react";
 import { useSubscription } from "../../contexts/SubscriptionContext";
+import { supabase } from "@/lib/supabase";
 
 const UsageCounter: React.FC = () => {
   const { userPlan, totalUsage, maxUsage } = useSubscription();
@@ -17,7 +18,6 @@ const UsageCounter: React.FC = () => {
 export default UsageCounter;
 import { Handler } from "@netlify/functions";
 import Stripe from "stripe";
-import supabase from "@/lib/supabase";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-02-24.acacia",

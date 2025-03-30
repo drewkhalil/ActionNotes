@@ -61,7 +61,7 @@ const RecapMe: React.FC = () => {
 
             3️⃣ **Key Terms & Definitions**  
             - Use \`:::note\` to define essential terms.  
-            - Keep definitions **short, clear, and to the point**.  
+            - Keep definitions **Fully explained/detailed, clear, and to the point**.  
 
             4️⃣ **Real-World Applications**  
             - Provide **at least one example** in a \`:::example\` block.  
