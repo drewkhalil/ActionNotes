@@ -41,7 +41,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   const [totalUsage, setTotalUsage] = useState(0);
 
   const maxUsage = {
-    free: 4,
+    free: Infinity,
     starter: 30,
     ultimate: Infinity,
   };
