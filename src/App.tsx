@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PricingModal from "./PricingModal";
-import { FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu, Settings as SettingsIcon, History, HelpCircle, BookOpen, Sun, Moon, Brain, FileQuestion, Home, Bookmark, PenSquare, Calendar } from 'lucide-react';
+import { FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu, Settings as SettingsIcon, History, HelpCircle, BookOpen, Brain, FileQuestion, Home, Bookmark, PenSquare, Calendar } from 'lucide-react';
 import jsPDF from 'jspdf';
 import ReactMarkdown from 'react-markdown';
 import { Elements } from "@stripe/react-stripe-js";
@@ -12,7 +12,7 @@ import { Settings } from './components/Settings';
 import { History as HistoryComponent } from './components/History';
 import ThinkFast from './components/ThinkFast';
 import Quiz from './components/Quiz';
-import { supabase, SupabaseUser } from './lib/supabase'; // Fix import to use SupabaseUser
+import { supabase, SupabaseUser } from './lib/supabase';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import TeachMe from './components/TeachMe';
 import RecapMe from './components/RecapMe';
@@ -24,7 +24,7 @@ interface AppUser extends SupabaseUser {
   usage_count?: number | null;
   last_reset?: string | null;
   plan?: string | null;
-  created_at: string; // Align with SupabaseUser (remove 'null | undefined')
+  created_at: string;
   email?: string | undefined;
 }
 
@@ -33,10 +33,6 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 function App() {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const savedTheme = localStorage.getItem("theme");
-    return savedTheme === "dark";
-  });
 
   useEffect(() => {
     const checkSession = async () => {
@@ -44,7 +40,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Session check:', session);
         if (session?.user) {
-          setUser(session.user as AppUser); // Cast to AppUser
+          setUser(session.user as AppUser);
           localStorage.setItem('userId', session.user.id);
         } else {
           console.log('No active session found. User is logged out.');
@@ -58,7 +54,7 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', session);
-      setUser(session?.user as AppUser | null ?? null); // Cast to AppUser
+      setUser(session?.user as AppUser | null ?? null);
       if (session?.user) {
         localStorage.setItem('userId', session.user.id);
       } else {
@@ -69,10 +65,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
-  }, [isDarkMode]);
-
   if (!user) {
     return <Login onLogin={setUser} />;
   }
@@ -80,7 +72,7 @@ function App() {
   return (
     <SubscriptionProvider>
       <Elements stripe={stripePromise}>
-        <MainApp user={user} setUser={setUser} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+        <MainApp user={user} setUser={setUser} />
       </Elements>
     </SubscriptionProvider>
   );
@@ -94,11 +86,9 @@ type Summary = {
 interface MainAppProps {
   user: AppUser | null;
   setUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
-  isDarkMode: boolean;
-  setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
+function MainApp({ user, setUser }: MainAppProps) {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -364,46 +354,8 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
 
   const getSidebarLinkClasses = (isActive: boolean) => {
     return `flex items-center px-4 py-2 rounded-lg transition-colors duration-200 
-      ${isActive ? "bg-gray-200 dark:bg-gray-700" : "bg-transparent"}
-      text-gray-900 dark:text-gray-300
-      hover:text-teal-600 dark:hover:text-teal-400 
-      hover:bg-gray-200 dark:hover:bg-gray-700`;
-  };
-
-  const getThemeStyles = () => {
-    if (activeView === 'teach') {
-      return {
-        bgColor: "bg-purple-500 dark:bg-purple-600",
-        textColor: "text-purple-800 dark:text-purple-200",
-        iconColor: "text-purple-700 dark:text-purple-300",
-        hoverTextColor: "hover:text-purple-600 dark:hover:text-purple-400",
-        borderColor: "border-purple-400 dark:border-purple-600",
-      };
-    } else if (activeView === 'recap') {
-      return {
-        bgColor: "bg-green-500 dark:bg-green-600",
-        textColor: "text-green-200 dark:text-green-100",
-        iconColor: "text-green-300 dark:text-green-200",
-        hoverTextColor: "hover:text-green-400 dark:hover:text-green-300",
-        borderColor: "border-green-600 dark:border-green-500",
-      };
-    } else if (activeView === 'reminder') {
-      return {
-        bgColor: "bg-teal-500 dark:bg-teal-600",
-        textColor: "text-teal-800 dark:text-teal-200",
-        iconColor: "text-teal-700 dark:text-teal-300",
-        hoverTextColor: "hover:text-teal-600 dark:hover:text-teal-400",
-        borderColor: "border-teal-400 dark:border-teal-600",
-      };
-    } else {
-      return {
-        bgColor: "bg-green-500 dark:bg-green-600",
-        textColor: "text-green-200 dark:text-green-100",
-        iconColor: "text-green-300 dark:text-green-200",
-        hoverTextColor: "hover:text-green-400 dark:hover:text-green-300",
-        borderColor: "border-green-600 dark:border-green-500",
-      };
-    }
+      ${isActive ? "bg-[#EAEAEA] text-[#1A1A1A]" : "bg-transparent text-[#1A1A1A]"}
+      hover:text-[#FFC498] hover:bg-[#EAEAEA]`;
   };
 
   const downloadPDF = () => {
@@ -420,10 +372,11 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
       <head>
           <title>Summary</title>
           <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              h1 { text-align: center; }
-              h2 { color: #2c3e50; }
+              body { font-family: Arial, sans-serif; padding: 20px; background-color: #FFFFFF; color: #1A1A1A; }
+              h1 { text-align: center; color: #1A1A1A; }
+              h2 { color: #1A1A1A; }
               ul { padding-left: 20px; }
+              li { margin-bottom: 8px; }
           </style>
       </head>
       <body>
@@ -447,21 +400,21 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
     return lines.map((line, index) => {
       if (line.startsWith('# ')) {
         return (
-          <h1 key={index} className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
+          <h1 key={index} className="text-3xl font-bold mb-4 text-[#1A1A1A]">
             {line.replace('# ', '')}
           </h1>
         );
       }
       if (line.startsWith('## ')) {
         return (
-          <h2 key={index} className="text-2xl font-bold mb-3 text-gray-800 dark:text-gray-200">
+          <h2 key={index} className="text-2xl font-bold mb-3 text-[#1A1A1A]">
             {line.replace('## ', '')}
           </h2>
         );
       }
       if (line.startsWith('### ')) {
         return (
-          <h3 key={index} className="text-xl font-bold mb-2 text-gray-700 dark:text-gray-300">
+          <h3 key={index} className="text-xl font-bold mb-2 text-[#1A1A1A]">
             {line.replace('### ', '')}
           </h3>
         );
@@ -475,7 +428,7 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
             {cells.map((cell, cellIndex) => (
               <div
                 key={cellIndex}
-                className={`flex-1 ${isHeader ? 'font-bold' : ''} text-gray-900 dark:text-gray-300`}
+                className={`flex-1 ${isHeader ? 'font-bold' : ''} text-[#4A4F57]`}
               >
                 {cell.trim()}
               </div>
@@ -486,7 +439,7 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
       if (line.startsWith('\\[') && line.endsWith('\\]')) {
         const mathContent = line.slice(2, -2);
         return (
-          <div key={index} className="my-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div key={index} className="my-4 p-4 bg-[#EAEAEA] rounded-lg">
             <MathJax.Context input='tex'>
               <MathJax.Node>{mathContent}</MathJax.Node>
             </MathJax.Context>
@@ -497,8 +450,8 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
         const parts = line.slice(2).split(/(\\\(.*?\\\))/g);
         return (
           <div key={index} className="flex items-start gap-2 mb-2">
-            <span className="text-gray-500 dark:text-gray-400">•</span>
-            <div className="text-gray-900 dark:text-gray-300">
+            <span className="text-[#4A4F57]">•</span>
+            <div className="text-[#4A4F57]">
               {parts.map((part, partIndex) => {
                 if (part.startsWith('\\(') && part.endsWith('\\)')) {
                   const mathContent = part.slice(2, -2);
@@ -517,7 +470,7 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
       if (line.includes('\\(') && line.includes('\\)')) {
         const parts = line.split(/(\\\(.*?\\\))/g);
         return (
-          <p key={index} className="mb-4 text-gray-900 dark:text-gray-300">
+          <p key={index} className="mb-4 text-[#4A4F57]">
             {parts.map((part, partIndex) => {
               if (part.startsWith('\\(') && part.endsWith('\\)')) {
                 const mathContent = part.slice(2, -2);
@@ -535,7 +488,7 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
       if (line.includes('**')) {
         const parts = line.split(/(\*\*.*?\*\*)/g);
         return (
-          <p key={index} className="mb-4 text-gray-900 dark:text-gray-300">
+          <p key={index} className="mb-4 text-[#4A4F57]">
             {parts.map((part, partIndex) => {
               if (part.startsWith('**') && part.endsWith('**')) {
                 return (
@@ -553,7 +506,7 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
         return <div key={index} className="h-4" />;
       }
       return (
-        <p key={index} className="mb-4 text-gray-700 dark:text-gray-300">
+        <p key={index} className="mb-4 text-[#4A4F57]">
           {line}
         </p>
       );
@@ -561,21 +514,21 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
   };
 
   const renderHomepage = () => (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-[#FFFFFF]">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Action Notes</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400">Transform your learning experience with AI-powered tools</p>
+        <h1 className="text-4xl font-bold text-[#1A1A1A] mb-2">Action Notes</h1>
+        <p className="text-lg text-[#4A4F57]">Transform your learning experience with AI-powered tools</p>
       </div>
       
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         <div 
           onClick={() => setActiveView('teach')}
-          className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-[#D6BCFA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
-          <div className="flex flex-col items-center text-white">
-            <Brain className="h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">TeachMeThat</h2>
-            <p className="text-center text-white/90">
+          <div className="flex flex-col items-center">
+            <Brain className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">TeachMeThat</h2>
+            <p className="text-center text-[#4A4F57]">
               Enter any topic, and let AI transform it into an interactive, comprehensive learning experience tailored just for you!
             </p>
           </div>
@@ -583,12 +536,12 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
 
         <div 
           onClick={() => setActiveView('recap')}
-          className="bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-[#C6F6D5] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
-          <div className="flex flex-col items-center text-white">
-            <FileQuestion className="h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">RecapMe</h2>
-            <p className="text-center text-white/90">
+          <div className="flex flex-col items-center">
+            <FileQuestion className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">RecapMe</h2>
+            <p className="text-center text-[#4A4F57]">
               Convert your meeting notes into clear, structured summaries instantly
             </p>
           </div>
@@ -596,25 +549,25 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
 
         <div 
           onClick={() => setActiveView('reminder')}
-          className="bg-gradient-to-br from-teal-500 to-cyan-600 dark:from-teal-600 dark:to-cyan-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-[#B2F5EA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
-          <div className="flex flex-col items-center text-white">
-            <Calendar className="h-16  w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">ReMinder</h2>
-            <p className="text-center text-white/90">
-              Plan your study schedule with AI-generated plans for upcoming tests
+          <div className="flex flex-col items-center">
+            <Calendar className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">ReMinder</h2>
+            <p className="text-center text-[#4A4F57]">
+              Plan your study schedule with AI GENERATED plans for upcoming tests
             </p>
           </div>
         </div>
 
         <div 
           onClick={() => setActiveView('quiz')}
-          className="bg-gradient-to-br from-red-500 to-rose-600 dark:from-red-600 dark:to-rose-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-[#FECACA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
-          <div className="flex flex-col items-center text-white">
-            <PenSquare className="h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">QuickQuizzer</h2>
-            <p className="text-center text-white/90">
+          <div className="flex flex-col items-center">
+            <PenSquare className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">QuickQuizzer</h2>
+            <p className="text-center text-[#4A4F57]">
               Create custom quizzes from your study materials with detailed solutions
             </p>
           </div>
@@ -622,12 +575,12 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
 
         <div 
           onClick={() => setActiveView('flashcards')}
-          className="bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-[#FED7AA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
-          <div className="flex flex-col items-center text-white">
-            <Bookmark className="h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">ThinkFast</h2>
-            <p className="text-center text-white/90">
+          <div className="flex flex-col items-center">
+            <Bookmark className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">ThinkFast</h2>
+            <p className="text-center text-[#4A4F57]">
               Create and study with AI-generated flashcards from your summaries
             </p>
           </div>
@@ -676,17 +629,17 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
   return (
     <SubscriptionProvider>
       <Elements stripe={stripePromise}>
-        <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'dark' : ''}`}>
+        <div className="min-h-screen transition-colors duration-200">
           <div
             id="sidebar"
-            className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 ease-in-out ${
+            className={`fixed inset-y-0 left-0 z-30 w-64 bg-[#FFFFFF] shadow-lg transform transition-transform duration-200 ease-in-out ${
               isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`}
           >
             <div className="flex flex-col h-full">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-[#EAEAEA]">
                 <h2 
-                  className="text-xl font-bold text-gray-900 dark:text-white cursor-pointer"
+                  className="text-xl font-bold text-[#1A1A1A] cursor-pointer"
                   onClick={() => setActiveView('main')}
                 >
                   Action Notes
@@ -753,26 +706,18 @@ function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
             </div>
           </div>
 
-          <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'} bg-gray-50 dark:bg-gray-900`}>
-            <header className="bg-white dark:bg-gray-800 shadow-sm">
+          <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'} bg-[#FFFFFF]`}>
+            <header className="bg-[#FFFFFF] shadow-sm">
               <div className="flex items-center justify-between px-4 py-3">
                 <button
                   id="hamburger-button"
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  className="p-2 rounded-md text-[#1A1A1A] hover:text-[#FFC498]"
                 >
                   <Menu className="h-6 w-6" />
                 </button>
                 <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => {
-                      console.log('Toggling dark mode, current state:', isDarkMode);
-                      setIsDarkMode(!isDarkMode);
-                    }}
-                    className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    {isDarkMode ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
-                  </button>
+                  {/* Theme toggle button removed */}
                 </div>
               </div>
             </header>
