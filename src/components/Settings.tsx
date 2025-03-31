@@ -6,11 +6,9 @@ import { Label } from "./ui/label";
 import { Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { clearUserHistory } from "../lib/pdfUtils";
-import type { User } from "../lib/supabase";
 import { useSubscription } from "../contexts/SubscriptionContext";
 
 interface SettingsProps {
-  user: User;
   onLogout: () => void;
 }
 
@@ -19,10 +17,9 @@ interface UserPreferences {
   pdfRetentionDays: number;
 }
 
-export function Settings({ user, onLogout }: SettingsProps) {
-  const { userPlan, totalUsage, maxUsage, setIsUpgradeOpen } =
-    useSubscription();
-
+export function Settings({ onLogout }: SettingsProps) {
+  const { userPlan, totalUsage, maxUsage, setIsUpgradeOpen } = useSubscription();
+  const [user, setUser] = useState<any>(null);
   const [preferences, setPreferences] = useState<UserPreferences>({
     autoSave: true,
     pdfRetentionDays: 30,
@@ -31,15 +28,26 @@ export function Settings({ user, onLogout }: SettingsProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    fetchPreferences();
-  }, [user.id]);
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+        fetchPreferences(user.id);
+      } else {
+        alert("You must be logged in to access settings.");
+        window.location.href = '/login';
+      }
+    };
 
-  const fetchPreferences = async () => {
+    fetchUser();
+  }, []);
+
+  const fetchPreferences = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("user_preferences")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .single();
 
       if (error && error.code !== "PGRST116") throw error;
@@ -105,6 +113,22 @@ export function Settings({ user, onLogout }: SettingsProps) {
       setIsLoggingOut(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <h2 className="text-2xl font-bold">Access Denied</h2>
+          </CardHeader>
+          <CardContent>
+            <p>Please log in to access settings.</p>
+            <Button onClick={() => window.location.href = '/login'}>Go to Login</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -210,7 +234,7 @@ export function Settings({ user, onLogout }: SettingsProps) {
                 </p>
               </div>
               <Button
-                onClick={() => setIsUpgradeOpen(true)} // ✅ Opens the same popup as crown button
+                onClick={() => setIsUpgradeOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Upgrade Plan

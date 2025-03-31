@@ -205,7 +205,7 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Quiz Generator
+            QuickQuizzes
           </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
             <span>

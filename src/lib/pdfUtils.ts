@@ -1,16 +1,16 @@
+import { supabase, SupabaseUser } from './supabase'; // Fix import to use SupabaseUser
 import jsPDF from 'jspdf';
-import { supabase } from '@/lib/supabase';
-import type { User } from './supabase';
 
 interface PDFContent {
   title: string;
-  type: 'lesson' | 'recap' | 'flashcards';
+  type: 'lesson' | 'recap' | 'flashcards' | 'reminder'; // Add 'reminder'
   content: string;
   metadata?: {
     date?: string;
     topic?: string;
     difficulty?: string;
     timeSpent?: string;
+    testDate?: string; // Add testDate for the next error
   };
 }
 
@@ -153,4 +153,4 @@ export async function clearUserHistory(userId: string) {
     console.error('Error clearing user history:', error);
     throw error;
   }
-} 
+}

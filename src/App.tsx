@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PricingModal from "./PricingModal";
-import { FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu, Settings as SettingsIcon, History, HelpCircle, BookOpen, Sun, Moon, Brain, FileQuestion, Home, Bookmark, PenSquare } from 'lucide-react';
+import { FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu, Settings as SettingsIcon, History, HelpCircle, BookOpen, Sun, Moon, Brain, FileQuestion, Home, Bookmark, PenSquare, Calendar } from 'lucide-react';
 import jsPDF from 'jspdf';
 import ReactMarkdown from 'react-markdown';
 import { Elements } from "@stripe/react-stripe-js";
@@ -10,20 +10,33 @@ import { InlineMath, BlockMath } from 'react-katex';
 import Login from './components/Login';
 import { Settings } from './components/Settings';
 import { History as HistoryComponent } from './components/History';
-import Flashcards from './components/Flashcards';
+import ThinkFast from './components/ThinkFast';
 import Quiz from './components/Quiz';
-import { supabase } from './lib/supabase';
-import type { User } from './lib/supabase';
+import { supabase, SupabaseUser } from './lib/supabase'; // Fix import to use SupabaseUser
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import TeachMe from './components/TeachMe';
 import RecapMe from './components/RecapMe';
 import MathJax from 'react-mathjax2';
+import ReMinder from './components/reminder';
+
+// Define custom AppUser type to extend Supabase Auth User
+interface AppUser extends SupabaseUser {
+  usage_count?: number | null;
+  last_reset?: string | null;
+  plan?: string | null;
+  created_at: string; // Align with SupabaseUser (remove 'null | undefined')
+  email?: string | undefined;
+}
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const savedTheme = localStorage.getItem("theme");
+    return savedTheme === "dark";
+  });
 
   useEffect(() => {
     const checkSession = async () => {
@@ -31,7 +44,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Session check:', session);
         if (session?.user) {
-          setUser(session.user);
+          setUser(session.user as AppUser); // Cast to AppUser
           localStorage.setItem('userId', session.user.id);
         } else {
           console.log('No active session found. User is logged out.');
@@ -45,7 +58,7 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', session);
-      setUser(session?.user ?? null);
+      setUser(session?.user as AppUser | null ?? null); // Cast to AppUser
       if (session?.user) {
         localStorage.setItem('userId', session.user.id);
       } else {
@@ -56,6 +69,10 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
+
   if (!user) {
     return <Login onLogin={setUser} />;
   }
@@ -63,7 +80,7 @@ function App() {
   return (
     <SubscriptionProvider>
       <Elements stripe={stripePromise}>
-        <MainApp />
+        <MainApp user={user} setUser={setUser} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
       </Elements>
     </SubscriptionProvider>
   );
@@ -74,15 +91,20 @@ type Summary = {
   timestamp: string;
 };
 
-function MainApp() {
-  const [user, setUser] = useState<any>(null);
+interface MainAppProps {
+  user: AppUser | null;
+  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
+  isDarkMode: boolean;
+  setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function MainApp({ user, setUser, isDarkMode, setIsDarkMode }: MainAppProps) {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [activeView, setActiveView] = useState<'main' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz'>('main');
+  const [activeView, setActiveView] = useState<'main' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'reminder'>('main');
 
   const [recentSummaries] = useState<Summary[]>([
     { sections: [{ title: "Recent Summary 1", content: ["Content from your last summary..."] }], timestamp: "2024-03-10 14:30" }
@@ -93,19 +115,16 @@ function MainApp() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear local storage
       localStorage.removeItem('userId');
       localStorage.removeItem('usageCounts');
       localStorage.removeItem('userPlan');
       localStorage.removeItem('lastUsageReset');
       
-      // Reset state
       setUser(null);
       setActiveView('main');
       setIsSidebarOpen(false);
       setSummary(null);
       setInput('');
-      
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');
@@ -121,18 +140,6 @@ function MainApp() {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
-    setIsDarkMode(savedTheme === "dark");
-    document.documentElement.setAttribute("data-theme", savedTheme);
-  }, []);
-
-  useEffect(() => {
-    const theme = isDarkMode ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [isDarkMode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -159,6 +166,13 @@ function MainApp() {
       const userId = localStorage.getItem("userId");
       if (!userId) {
         alert("⚠️ Error: Missing user ID. Please log in.");
+        setIsProcessing(false);
+        return;
+      }
+
+      if (!user) {
+        alert("⚠️ Error: User not found. Please log in.");
+        setIsProcessing(false);
         return;
       }
 
@@ -173,14 +187,13 @@ function MainApp() {
       if (!usageData.success) {
         alert("🚀 You've used all 3 free summaries this week! Upgrade to continue.");
         setShowPricingModal(true);
+        setIsProcessing(false);
         return;
       }
 
-      // Generate summary
       const summary = await generateSummary(input);
       setSummary(summary);
 
-      // Save to history
       const { error } = await supabase
         .from('history')
         .insert({
@@ -193,14 +206,12 @@ function MainApp() {
 
       if (error) throw error;
 
-      // Update usage in frontend
       if (usageData.remaining !== "unlimited") {
         localStorage.setItem("summaryUsage", JSON.stringify({
           count: 3 - usageData.remaining, 
           lastReset: Date.now(),
         }));
       }
-
     } catch (error: any) {
       console.error("❌ Error:", error);
       alert("Something went wrong. Please try again.");
@@ -220,7 +231,6 @@ function MainApp() {
 
     setIsProcessing(true);
     try {
-      // Save to history
       if (user?.id) {
         const { error } = await supabase
           .from('history')
@@ -267,7 +277,6 @@ function MainApp() {
 
   const generateSummary = async (text: string) => {
     try {
-      // Save to history
       if (user?.id) {
         const { error } = await supabase
           .from('history')
@@ -294,29 +303,19 @@ function MainApp() {
 
   const cleanMathExpression = (text: string): string => {
     return text
-      // Fix math expressions first
       .replace(/\\\[(.*?)\\\]/gs, (_, math) => `\n\\[${math.trim()}\\]\n`)
       .replace(/\\\((.*?)\\\)/g, (_, math) => `\\(${math.trim()}\\)`)
-      // Remove redundant bold markers around headers
       .replace(/^\*\*(#+)\s*(.*?)\*\*$/gm, (_, hashes, title) => `${hashes} ${title.trim()}`)
-      // Fix headers with proper spacing
       .replace(/^(#+)\s*(.*)$/gm, (_, hashes, title) => `\n${hashes} ${title.trim()}\n`)
-      // Fix bullet points with proper spacing and formatting
       .replace(/^[-*•]\s*/gm, '\n• ')
-      // Fix section breaks
       .replace(/^-{3,}$/gm, '\n---\n')
-      // Fix "where:" and similar list intros
       .replace(/^where:$/gm, 'where:\n')
-      // Fix numbered lists
       .replace(/^(\d+)\.\s*/gm, (_, num) => `${num}. `)
-      // Fix special characters and units
       .replace(/([0-9])°([CF])/g, '$1°$2')
       .replace(/(\d+)\s*([KM])?\s*mol\^?-?\s*1/g, '$1$2 mol⁻¹')
       .replace(/(\d+)\s*K\^?-?\s*1/g, '$1 K⁻¹')
-      // Fix table formatting
       .replace(/\|([^|]*)\|/g, (_, content) => `|${content.trim()}|`)
       .replace(/\n\s*\|\s*([^|]*)\s*\|\s*\n/g, '\n| $1 |\n')
-      // Clean up spacing while preserving structure
       .split('\n')
       .map(line => line.trim())
       .filter(line => line)
@@ -367,26 +366,42 @@ function MainApp() {
     return `flex items-center px-4 py-2 rounded-lg transition-colors duration-200 
       ${isActive ? "bg-gray-200 dark:bg-gray-700" : "bg-transparent"}
       text-gray-900 dark:text-gray-300
-      hover:text-emerald-600 dark:hover:text-emerald-400 
+      hover:text-teal-600 dark:hover:text-teal-400 
       hover:bg-gray-200 dark:hover:bg-gray-700`;
   };
 
   const getThemeStyles = () => {
-    if (activeView === "teach") {
+    if (activeView === 'teach') {
       return {
-        bgColor: isDarkMode ? "bg-purple-700" : "bg-purple-500",
-        textColor: isDarkMode ? "text-purple-200" : "text-purple-800",
-        iconColor: isDarkMode ? "text-purple-300" : "text-purple-700",
-        hoverTextColor: isDarkMode ? "hover:text-purple-400" : "hover:text-purple-600",
-        borderColor: isDarkMode ? "border-purple-600" : "border-purple-400",
+        bgColor: "bg-purple-500 dark:bg-purple-600",
+        textColor: "text-purple-800 dark:text-purple-200",
+        iconColor: "text-purple-700 dark:text-purple-300",
+        hoverTextColor: "hover:text-purple-600 dark:hover:text-purple-400",
+        borderColor: "border-purple-400 dark:border-purple-600",
+      };
+    } else if (activeView === 'recap') {
+      return {
+        bgColor: "bg-green-500 dark:bg-green-600",
+        textColor: "text-green-200 dark:text-green-100",
+        iconColor: "text-green-300 dark:text-green-200",
+        hoverTextColor: "hover:text-green-400 dark:hover:text-green-300",
+        borderColor: "border-green-600 dark:border-green-500",
+      };
+    } else if (activeView === 'reminder') {
+      return {
+        bgColor: "bg-teal-500 dark:bg-teal-600",
+        textColor: "text-teal-800 dark:text-teal-200",
+        iconColor: "text-teal-700 dark:text-teal-300",
+        hoverTextColor: "hover:text-teal-600 dark:hover:text-teal-400",
+        borderColor: "border-teal-400 dark:border-teal-600",
       };
     } else {
       return {
-        bgColor: isDarkMode ? "bg-emerald-700" : "bg-emerald-500",
-        textColor: isDarkMode ? "text-emerald-200" : "text-emerald-800",
-        iconColor: isDarkMode ? "text-emerald-300" : "text-emerald-700",
-        hoverTextColor: isDarkMode ? "hover:text-emerald-400" : "hover:text-emerald-600",
-        borderColor: isDarkMode ? "border-emerald-600" : "border-emerald-400",
+        bgColor: "bg-green-500 dark:bg-green-600",
+        textColor: "text-green-200 dark:text-green-100",
+        iconColor: "text-green-300 dark:text-green-200",
+        hoverTextColor: "hover:text-green-400 dark:hover:text-green-300",
+        borderColor: "border-green-600 dark:border-green-500",
       };
     }
   };
@@ -430,30 +445,27 @@ function MainApp() {
   const renderContent = (content: string) => {
     const lines = content.split('\n');
     return lines.map((line, index) => {
-      // Handle headers
       if (line.startsWith('# ')) {
         return (
-          <h1 key={index} className="text-3xl font-bold mb-4 text-gray-900">
+          <h1 key={index} className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
             {line.replace('# ', '')}
           </h1>
         );
       }
       if (line.startsWith('## ')) {
         return (
-          <h2 key={index} className="text-2xl font-bold mb-3 text-gray-800">
+          <h2 key={index} className="text-2xl font-bold mb-3 text-gray-800 dark:text-gray-200">
             {line.replace('## ', '')}
           </h2>
         );
       }
       if (line.startsWith('### ')) {
         return (
-          <h3 key={index} className="text-xl font-bold mb-2 text-gray-700">
+          <h3 key={index} className="text-xl font-bold mb-2 text-gray-700 dark:text-gray-300">
             {line.replace('### ', '')}
           </h3>
         );
       }
-
-      // Handle tables
       if (line.includes('|')) {
         const cells = line.split('|').filter(cell => cell.trim());
         const isHeader = lines[index + 1]?.includes('---');
@@ -463,7 +475,7 @@ function MainApp() {
             {cells.map((cell, cellIndex) => (
               <div
                 key={cellIndex}
-                className={`flex-1 ${isHeader ? 'font-bold' : ''}`}
+                className={`flex-1 ${isHeader ? 'font-bold' : ''} text-gray-900 dark:text-gray-300`}
               >
                 {cell.trim()}
               </div>
@@ -471,26 +483,22 @@ function MainApp() {
           </div>
         );
       }
-
-      // Handle block math expressions
       if (line.startsWith('\\[') && line.endsWith('\\]')) {
         const mathContent = line.slice(2, -2);
         return (
-          <div key={index} className="my-4 p-4 bg-gray-50 rounded-lg">
+          <div key={index} className="my-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <MathJax.Context input='tex'>
               <MathJax.Node>{mathContent}</MathJax.Node>
             </MathJax.Context>
           </div>
         );
       }
-
-      // Handle bullet points with inline math
       if (line.startsWith('- ')) {
         const parts = line.slice(2).split(/(\\\(.*?\\\))/g);
         return (
           <div key={index} className="flex items-start gap-2 mb-2">
-            <span className="text-gray-500">•</span>
-            <div>
+            <span className="text-gray-500 dark:text-gray-400">•</span>
+            <div className="text-gray-900 dark:text-gray-300">
               {parts.map((part, partIndex) => {
                 if (part.startsWith('\\(') && part.endsWith('\\)')) {
                   const mathContent = part.slice(2, -2);
@@ -506,12 +514,10 @@ function MainApp() {
           </div>
         );
       }
-
-      // Handle lines with inline math
       if (line.includes('\\(') && line.includes('\\)')) {
         const parts = line.split(/(\\\(.*?\\\))/g);
         return (
-          <p key={index} className="mb-4">
+          <p key={index} className="mb-4 text-gray-900 dark:text-gray-300">
             {parts.map((part, partIndex) => {
               if (part.startsWith('\\(') && part.endsWith('\\)')) {
                 const mathContent = part.slice(2, -2);
@@ -526,12 +532,10 @@ function MainApp() {
           </p>
         );
       }
-
-      // Handle bold text
       if (line.includes('**')) {
         const parts = line.split(/(\*\*.*?\*\*)/g);
         return (
-          <p key={index} className="mb-4">
+          <p key={index} className="mb-4 text-gray-900 dark:text-gray-300">
             {parts.map((part, partIndex) => {
               if (part.startsWith('**') && part.endsWith('**')) {
                 return (
@@ -545,15 +549,11 @@ function MainApp() {
           </p>
         );
       }
-
-      // Handle empty lines
       if (!line.trim()) {
         return <div key={index} className="h-4" />;
       }
-
-      // Regular text
       return (
-        <p key={index} className="mb-4 text-gray-700">
+        <p key={index} className="mb-4 text-gray-700 dark:text-gray-300">
           {line}
         </p>
       );
@@ -570,20 +570,20 @@ function MainApp() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
         <div 
           onClick={() => setActiveView('teach')}
-          className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
         >
           <div className="flex flex-col items-center text-white">
             <Brain className="h-16 w-16 mb-4" />
             <h2 className="text-2xl font-bold mb-2">TeachMeThat</h2>
             <p className="text-center text-white/90">
-              Transform any topic into an interactive learning experience with AI-powered explanations
+              Enter any topic, and let AI transform it into an interactive, comprehensive learning experience tailored just for you!
             </p>
           </div>
         </div>
 
         <div 
           onClick={() => setActiveView('recap')}
-          className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
         >
           <div className="flex flex-col items-center text-white">
             <FileQuestion className="h-16 w-16 mb-4" />
@@ -595,27 +595,40 @@ function MainApp() {
         </div>
 
         <div 
-          onClick={() => setActiveView('flashcards')}
-          className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          onClick={() => setActiveView('reminder')}
+          className="bg-gradient-to-br from-teal-500 to-cyan-600 dark:from-teal-600 dark:to-cyan-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
         >
           <div className="flex flex-col items-center text-white">
-            <Bookmark className="h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Flashcards</h2>
+            <Calendar className="h-16  w-16 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">ReMinder</h2>
             <p className="text-center text-white/90">
-              Create and study with AI-generated flashcards from your summaries
+              Plan your study schedule with AI-generated plans for upcoming tests
             </p>
           </div>
         </div>
 
         <div 
           onClick={() => setActiveView('quiz')}
-          className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+          className="bg-gradient-to-br from-red-500 to-rose-600 dark:from-red-600 dark:to-rose-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
         >
           <div className="flex flex-col items-center text-white">
             <PenSquare className="h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Quiz Generator</h2>
+            <h2 className="text-2xl font-bold mb-2">QuickQuizzer</h2>
             <p className="text-center text-white/90">
               Create custom quizzes from your study materials with detailed solutions
+            </p>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setActiveView('flashcards')}
+          className="bg-gradient-to-br from-orange-500 to-amber-600 dark:from-orange-600 dark:to-amber-700 rounded-xl shadow-2xl p-8 cursor-pointer transform hover:scale-105 transition-all duration-300"
+        >
+          <div className="flex flex-col items-center text-white">
+            <Bookmark className="h-16 w-16 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">ThinkFast</h2>
+            <p className="text-center text-white/90">
+              Create and study with AI-generated flashcards from your summaries
             </p>
           </div>
         </div>
@@ -637,11 +650,11 @@ function MainApp() {
 
       case 'settings':
         return (
-          <Settings user={user} onLogout={handleLogout} />
+          <Settings onLogout={handleLogout} />
         );
 
       case 'flashcards':
-        return <Flashcards />;
+        return <ThinkFast />;
 
       case 'quiz':
         return <Quiz />;
@@ -652,6 +665,9 @@ function MainApp() {
       case 'recap':
         return <RecapMe />;
 
+      case 'reminder':
+        return <ReMinder />;
+
       default:
         return null;
     }
@@ -660,8 +676,7 @@ function MainApp() {
   return (
     <SubscriptionProvider>
       <Elements stripe={stripePromise}>
-        <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? "bg-gray-900 text-gray-300" : "bg-gray-50 text-gray-900"}`}>
-          {/* Sidebar */}
+        <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'dark' : ''}`}>
           <div
             id="sidebar"
             className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-200 ease-in-out ${
@@ -670,7 +685,12 @@ function MainApp() {
           >
             <div className="flex flex-col h-full">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Action Notes</h2>
+                <h2 
+                  className="text-xl font-bold text-gray-900 dark:text-white cursor-pointer"
+                  onClick={() => setActiveView('main')}
+                >
+                  Action Notes
+                </h2>
               </div>
               <nav className="flex-1 p-4 space-y-2">
                 <button
@@ -699,14 +719,21 @@ function MainApp() {
                   className={getSidebarLinkClasses(activeView === 'flashcards')}
                 >
                   <Bookmark className="h-5 w-5 mr-2" />
-                  Flashcards
+                  ThinkFast
                 </button>
                 <button
                   onClick={() => setActiveView('quiz')}
                   className={getSidebarLinkClasses(activeView === 'quiz')}
                 >
                   <PenSquare className="h-5 w-5 mr-2" />
-                  Quiz Generator
+                  QuickQuizzer
+                </button>
+                <button
+                  onClick={() => setActiveView('reminder')}
+                  className={getSidebarLinkClasses(activeView === 'reminder')}
+                >
+                  <Calendar className="h-5 w-5 mr-2" />
+                  ReMinder
                 </button>
                 <button
                   onClick={() => setActiveView('history')}
@@ -726,8 +753,7 @@ function MainApp() {
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'} bg-gray-50 dark:bg-gray-900`}>
             <header className="bg-white dark:bg-gray-800 shadow-sm">
               <div className="flex items-center justify-between px-4 py-3">
                 <button
@@ -739,7 +765,10 @@ function MainApp() {
                 </button>
                 <div className="flex items-center space-x-4">
                   <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    onClick={() => {
+                      console.log('Toggling dark mode, current state:', isDarkMode);
+                      setIsDarkMode(!isDarkMode);
+                    }}
                     className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                   >
                     {isDarkMode ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
@@ -750,14 +779,13 @@ function MainApp() {
 
             <main className="container mx-auto px-4 py-8">
               {activeView === 'settings' ? (
-                <Settings user={user} onLogout={handleLogout} />
+                <Settings onLogout={handleLogout} />
               ) : (
                 renderMainContent()
               )}
             </main>
           </div>
 
-          {/* Pricing Modal */}
           {showPricingModal && <PricingModal show={showPricingModal} setShow={setShowPricingModal} />}
         </div>
       </Elements>

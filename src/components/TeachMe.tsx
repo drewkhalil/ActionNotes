@@ -134,7 +134,7 @@ const TeachMe: React.FC = () => {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Paste your notes to generate a recap..."
+            placeholder=" Enter a topic you want to learn about (e.g., History, 10th, World War II)."
             className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
           />
           <Button

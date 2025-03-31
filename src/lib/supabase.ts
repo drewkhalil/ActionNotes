@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase';
-import { Session } from '@supabase/supabase-js';
-import dotenv from "dotenv";
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -12,7 +10,6 @@ console.log('isDevelopment', isDevelopment);
 // Use the appropriate URL based on environment
 const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtdXZzYmFmdnJ2c2dkcGxodmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0OTY1ODIsImV4cCI6MjA1ODA3MjU4Mn0.rn_nhW2ongqXl2BoGY1wDGN7c0ojmd1iNX_xBQs3PBo'
-// const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) {
   throw new Error('Missing Supabase URL');
@@ -41,7 +38,8 @@ const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 // Named export for supabase
 export { supabase };
 
-export type User = Database['public']['Tables']['users']['Row'];
+// Use the correct Supabase Auth User type
+export type { User as SupabaseUser } from '@supabase/supabase-js';
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 
@@ -49,7 +47,7 @@ export async function updateUsageCount(userId: string) {
   try {
     const { data: user, error: fetchError } = await supabase
       .from('users')
-      .select('usage_count, last_reset, is_premium')
+      .select('usage_count, last_reset, plan')
       .eq('id', userId)
       .single();
 
@@ -67,13 +65,13 @@ export async function updateUsageCount(userId: string) {
     }
 
     const now = new Date();
-    const lastReset = new Date(user.last_reset);
+    const lastReset = user.last_reset ? new Date(user.last_reset) : new Date();
     const shouldReset = now.getTime() - lastReset.getTime() > 7 * 24 * 60 * 60 * 1000;
 
     const newCount = shouldReset ? 1 : user.usage_count + 1;
-    const remaining = user.is_premium ? 'unlimited' : 3 - newCount;
+    const remaining = user.plan === 'premium' ? 'unlimited' : 3 - newCount;
 
-    if (!user.is_premium && newCount > 3) {
+    if (user.plan !== 'premium' && newCount > 3) {
       return { success: false, remaining: 0 };
     }
 

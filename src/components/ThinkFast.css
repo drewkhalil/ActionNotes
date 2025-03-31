@@ -19,19 +19,15 @@
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  height: 400px;
+  height: 600px;
   position: relative;
 }
 
 .flashcard {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 2px solid #e5e7eb;
-  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0; /* Removed margin to eliminate space */
 }
 
 .flashcard.rotate-y-180 {
@@ -41,14 +37,14 @@
 .flashcard-content {
   position: absolute;
   inset: 0;
-  padding: 2rem;
+  padding: 2.5rem;
   backface-visibility: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   background: white;
-  border-radius: 0.9rem;
+  border-radius: 1rem;
 }
 
 .flashcard-content.back {
@@ -57,23 +53,14 @@
 }
 
 .question-text {
-  font-family: 'Georgia', serif;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 1.5rem;
-  line-height: 1.4;
-  width: 100%;
+  font-size: 2rem;
+  font-weight: bold;
   text-align: center;
 }
 
 .answer-text {
-  font-size: 1.25rem;
-  color: #333;
-  margin-bottom: 1.5rem;
-  line-height: 1.6;
-  width: 100%;
-  text-align: left;
+  font-size: 1.75rem;
+  text-align: center;
 }
 
 /* Formula and equation styling */
@@ -122,11 +109,11 @@
 }
 
 .bullet-points li {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   padding-left: 1.5rem;
   position: relative;
-  font-size: 1.1rem;
-  line-height: 1.5;
+  font-size: 1.5rem;
+  line-height: 1.6;
   color: #333;
 }
 
@@ -143,7 +130,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2rem;
+  margin-top: 0; /* Removed margin to place buttons right under */
   padding: 0 1rem;
   width: 100%;
 }
@@ -204,9 +191,10 @@
 
 /* Progress text */
 .progress-text {
-  font-size: 0.875rem;
+  font-size: 1.25rem;
   color: #6b7280;
   font-weight: 500;
+  margin-top: 0; /* Removed margin to align with buttons */
 }
 
 /* Dark mode support */
@@ -249,4 +237,31 @@
   .progress-bar {
     background-color: #374151;
   }
-} 
+}
+
+.card {
+  width: 500px;
+  height: 400px;
+  perspective: 1000px;
+}
+
+.front, .back {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+}
+
+.back {
+  transform: rotateY(180deg);
+}
+
+.flipped .front {
+  transform: rotateY(180deg);
+}
+
+.flipped .back {
+  transform: rotateY(0);
+}
