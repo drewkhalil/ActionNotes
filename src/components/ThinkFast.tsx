@@ -172,7 +172,7 @@ const ThinkFast: React.FC = () => {
             {userPlan === "free" && (
               <Button
                 onClick={() => setIsUpgradeOpen(true)}
-                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
+                className="flex items-center space-x-1 text-orange-600 hover:text-orange-700"
                 variant="ghost"
               >
                 <Crown className="h-4 w-4" />
@@ -185,15 +185,13 @@ const ThinkFast: React.FC = () => {
         <div className="mb-4 flex gap-4">
           <Button
             onClick={() => setInputType("bullets")}
-            variant={inputType === "bullets" ? "primary" : "outline"}
-            className="flex-1"
+            className={`flex-1 ${inputType === "bullets" ? "bg-[#f97316] hover:bg-[#ea580c] text-white" : "bg-orange-200 hover:bg-orange-300 text-gray-900"}`}
           >
             Explained Bullets
           </Button>
           <Button
             onClick={() => setInputType("definition")}
-            variant={inputType === "definition" ? "primary" : "outline"}
-            className="flex-1"
+            className={`flex-1 ${inputType === "definition" ? "bg-[#f97316] hover:bg-[#ea580c] text-white" : "bg-orange-200 hover:bg-orange-300 text-gray-900"}`}
           >
             Term & Definition
           </Button>
@@ -206,12 +204,12 @@ const ThinkFast: React.FC = () => {
             placeholder={inputType === "bullets" 
               ? "Enter your notes here..." 
               : "Enter terms one per line..."}
-            className="w-full h-32 resize-none"
+            className="w-full h-32 resize-none border-gray-300 focus:border-[#f97316] focus:ring-[#f97316]"
           />
           <Button
             onClick={generateFlashcards}
             disabled={isLoading || !inputText.trim()}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+            className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white"
           >
             {isLoading ? (
               <>

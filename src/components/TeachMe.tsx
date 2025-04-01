@@ -134,13 +134,13 @@ const TeachMe: React.FC = () => {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder=" Enter a topic you want to learn about (e.g., History, 10th, World War II)."
-            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+            placeholder="Enter a topic you want to learn about (e.g., History, 10th, World War II)."
+            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 focus:border-[#C4A7FF] focus:ring-[#C4A7FF]"
           />
           <Button
             onClick={handleSubmit}
             disabled={isProcessing || !input.trim()}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+            className="w-full bg-[#C4A7FF] hover:bg-[#B794FF] text-white"
           >
             {isProcessing ? (
               <div className="flex items-center justify-center">

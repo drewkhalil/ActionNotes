@@ -24,23 +24,22 @@
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
 }
 
-/* Blue theme styles */
+/* Red theme styles based on #FECDD3 */
 .quiz-container {
-  --quiz-primary: #2563eb;
-  --quiz-primary-hover: #1d4ed8;
-  --quiz-primary-light: #60a5fa;
-  --quiz-primary-dark: #1e40af;
+  --quiz-primary: #FECDD3; /* Updated to a more reddish light red */
+  --quiz-primary-hover: #FCA5A5; /* Slightly darker shade for hover */
+  --quiz-primary-light: #FEE2E2; /* Lighter shade for accents */
+  --quiz-primary-dark: #F87171; /* Darker shade for contrast */
 }
 
 /* Quiz specific button styles */
 .quiz-button {
-  background: linear-gradient(to right, #2563eb, #3b82f6) !important;
+  background-color: #F87171 !important; /* Darker shade */
   color: white !important;
 }
 
 .quiz-button:hover {
-  background: linear-gradient(to right, #1d4ed8, #2563eb) !important;
-  opacity: 0.9;
+  background-color: #EF4444 !important; /* Hover shade */
 }
 
 .quiz-button:disabled {
@@ -50,20 +49,20 @@
 
 /* Multiple choice styles */
 .quiz-radio {
-  accent-color: var(--quiz-primary);
+  accent-color: var(--quiz-primary-dark); /* Darker shade */
 }
 
 .quiz-radio:checked + label {
-  color: var(--quiz-primary);
+  color: var(--quiz-primary-dark);
   font-weight: 500;
 }
 
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
   .quiz-container {
-    --quiz-primary: #3b82f6;
-    --quiz-primary-hover: #2563eb;
-    --quiz-primary-light: #60a5fa;
-    --quiz-primary-dark: #1d4ed8;
+    --quiz-primary: #FECDD3; /* Updated to a more reddish light red */
+    --quiz-primary-hover: #FCA5A5;
+    --quiz-primary-light: #FEE2E2;
+    --quiz-primary-dark: #F87171;
   }
-} 
+}

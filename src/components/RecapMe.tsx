@@ -11,7 +11,7 @@ import rehypeMathjax from "rehype-mathjax";
 
 const recapOpenAI = new OpenAI({
   baseURL: "https://models.inference.ai.azure.com",
-  apiKey: import.meta.env.VITE_OPENAI_RECAP_API_KEY, // Ensure this is set in .env
+  apiKey: import.meta.env.VITE_OPENAI_RECAP_API_KEY,
   dangerouslyAllowBrowser: true,
 });
 
@@ -125,7 +125,7 @@ const RecapMe: React.FC = () => {
             {userPlan === "free" && (
               <Button
                 onClick={() => setIsUpgradeOpen(true)}
-                className="flex items-center space-x-1 text-emerald-600 hover:text-emerald-700"
+                className="flex items-center space-x-1 text-green-600 hover:text-green-700"
                 variant="ghost"
               >
                 <Crown className="h-4 w-4" />
@@ -140,13 +140,13 @@ const RecapMe: React.FC = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Paste your notes to generate a recap..."
-            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 focus:border-[#34D399] focus:ring-[#34D399]"
           />
 
           <Button
             onClick={handleSubmit}
             disabled={isProcessing || !input.trim()}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="w-full bg-[#34D399] hover:bg-[#10B981] text-white"
           >
             {isProcessing ? (
               <div className="flex items-center justify-center">

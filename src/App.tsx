@@ -355,7 +355,7 @@ function MainApp({ user, setUser }: MainAppProps) {
   const getSidebarLinkClasses = (isActive: boolean) => {
     return `flex items-center px-4 py-2 rounded-lg transition-colors duration-200 
       ${isActive ? "bg-[#EAEAEA] text-[#1A1A1A]" : "bg-transparent text-[#1A1A1A]"}
-      hover:text-[#FFC498] hover:bg-[#EAEAEA]`;
+      hover:text-[#1E3A5F] hover:bg-[#EAEAEA]`;
   };
 
   const downloadPDF = () => {
@@ -555,7 +555,7 @@ function MainApp({ user, setUser }: MainAppProps) {
             <Calendar className="h-16 w-16 mb-4 text-[#1E3A5F]" />
             <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">ReMinder</h2>
             <p className="text-center text-[#4A4F57]">
-              Plan your study schedule with AI GENERATED plans for upcoming tests
+              Plan your study schedule with an AI generated schedule personalized for your upcoming tests
             </p>
           </div>
         </div>
@@ -712,7 +712,7 @@ function MainApp({ user, setUser }: MainAppProps) {
                 <button
                   id="hamburger-button"
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="p-2 rounded-md text-[#1A1A1A] hover:text-[#FFC498]"
+                  className="p-2 rounded-md text-[#1A1A1A] hover:text-[#1E3A5F]"
                 >
                   <Menu className="h-6 w-6" />
                 </button>

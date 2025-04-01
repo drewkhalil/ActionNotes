@@ -121,7 +121,7 @@
   content: "•";
   position: absolute;
   left: 0;
-  color: #f97316;
+  color: #f97316; /* Already correct */
   font-weight: bold;
 }
 
@@ -136,7 +136,7 @@
 }
 
 .nav-button {
-  background-color: #f97316;
+  background-color: #f97316; /* Already correct */
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
@@ -148,7 +148,7 @@
 }
 
 .nav-button:hover {
-  background-color: #ea580c;
+  background-color: #ea580c; /* Already correct */
 }
 
 .nav-button:disabled {
@@ -168,7 +168,7 @@
 
 .progress-bar-fill {
   height: 100%;
-  background-color: #f97316;
+  background-color: #f97316; /* Already correct */
   transition: width 0.3s ease;
 }
 
@@ -236,6 +236,10 @@
 
   .progress-bar {
     background-color: #374151;
+  }
+
+  .progress-bar-fill {
+    background-color: #f97316; /* Already correct */
   }
 }
 

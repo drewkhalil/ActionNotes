@@ -19,7 +19,7 @@ const reminderOpenAI = new OpenAI({
 const ReMinder: React.FC = () => {
   const [testDate, setTestDate] = useState("");
   const [topic, setTopic] = useState("");
-  const [hoursPerDay, setHoursPerDay] = useState(2);
+  const [minutesPerDay, setMinutesPerDay] = useState(15); // Changed default to 15 minutes
   const [isProcessing, setIsProcessing] = useState(false);
   const [studyPlan, setStudyPlan] = useState("");
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
@@ -51,6 +51,7 @@ const ReMinder: React.FC = () => {
       }
 
       const daysRemaining = Math.ceil((test.getTime() - today.getTime()) / (1000 * 3600 * 24));
+      const hoursPerDay = minutesPerDay / 60; // Convert minutes to hours for the prompt
       const prompt = `Generate a detailed study plan for a ${topic || "test"} in ${daysRemaining} days, assuming ${hoursPerDay} hours per day. Break it into daily tasks, including topics to review, practice problems, and milestones. Use a structured format with dates and clear instructions.`;
 
       const response = await reminderOpenAI.chat.completions.create({
@@ -128,7 +129,7 @@ const ReMinder: React.FC = () => {
                 type="date"
                 value={testDate}
                 onChange={(e) => setTestDate(e.target.value)}
-                className="mt-1 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                className="mt-1 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 focus:border-teal-600 focus:ring-teal-600"
                 required
               />
             </div>
@@ -138,18 +139,19 @@ const ReMinder: React.FC = () => {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g., Math Exam or list of topics..."
-                className="mt-1 w-full h-24 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                className="mt-1 w-full h-24 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 focus:border-teal-600 focus:ring-teal-600"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Hours Per Day</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Minutes Per Day</label>
               <Input
                 type="number"
-                value={hoursPerDay}
-                onChange={(e) => setHoursPerDay(Math.max(1, parseInt(e.target.value) || 2))}
-                min="1"
-                max="8"
-                className="mt-1 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                value={minutesPerDay}
+                onChange={(e) => setMinutesPerDay(Math.max(15, parseInt(e.target.value) || 15))} // Minimum 15 minutes, default 15
+                min="15"
+                max="480" // 8 hours in minutes
+                step="5" // Increment by 5 minutes
+                className="mt-1 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 focus:border-teal-600 focus:ring-teal-600"
               />
             </div>
             <Button

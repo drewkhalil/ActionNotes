@@ -4,9 +4,7 @@ import { Textarea } from "./ui/textarea";
 import { Loader2, Eye, Crown } from "lucide-react";
 import UpgradePopup from "./ui/UpgradePopup";
 import { useSubscription } from "../contexts/SubscriptionContext";
-import UsageCounter from "./ui/UsageCounter";
 import "./Quiz.css";
-import { loadStripe } from "@stripe/stripe-js";
 import OpenAI from "openai";
 
 interface Question {
@@ -34,7 +32,7 @@ const quizOpenAI = new OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
-const Quiz = () => {
+const Quiz: React.FC = () => {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -43,6 +41,7 @@ const Quiz = () => {
     { type: "short-answer", count: 3 },
     { type: "problem-solving", count: 2 },
   ]);
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
 
   const {
     userPlan,
@@ -70,7 +69,6 @@ const Quiz = () => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // Check usage limits
     if (checkUsageLimit()) {
       setIsUpgradeOpen(true);
       return;
@@ -122,10 +120,11 @@ const Quiz = () => {
    - Ensure questions are self-contained
 
 6. Difficulty Levels:
-   - Include a mix of difficulty levels
-   - Progress from basic to advanced concepts
+   - Generate all questions at the "${difficulty}" difficulty level
+   - For "easy", focus on basic recall and understanding
+   - For "medium", include application and analysis
+   - For "hard", emphasize synthesis, evaluation, and complex problem-solving
    - Mark questions with difficulty indicators
-   - Consider time constraints
    - Balance challenge and accessibility
 
 7. Answer Format:
@@ -194,7 +193,7 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
 
   const toggleAnswer = (questionId: number) => {
     setQuestions(
-      questions.map((q) =>
+      questions.map((q: Question) =>
         q.id === questionId ? { ...q, isRevealed: !q.isRevealed } : q,
       ),
     );
@@ -215,7 +214,7 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
             {userPlan === "free" && (
               <Button
                 onClick={() => setIsUpgradeOpen(true)}
-                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
+                className="flex items-center space-x-1 text-red-600 hover:text-red-700"
                 variant="ghost"
               >
                 <Crown className="h-4 w-4" />
@@ -231,7 +230,7 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Paste your study guide here..."
-              className="w-full h-64 mb-4"
+              className="w-full h-64 mb-4 border-gray-300 focus:border-[#F87171] focus:ring-[#F87171] text-gray-900 dark:text-white"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -256,10 +255,25 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
                         parseInt(e.target.value),
                       )
                     }
-                    className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800"
+                    className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 focus:border-[#F87171] focus:ring-[#F87171] text-gray-900 dark:text-white"
                   />
                 </div>
               ))}
+            </div>
+
+            <div className="flex flex-col space-y-2 mb-4">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Difficulty Level
+              </label>
+              <select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard")}
+                className="w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 border-gray-300 focus:border-[#F87171] focus:ring-[#F87171] text-gray-900 dark:text-white"
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
             </div>
 
             <Button
@@ -309,10 +323,11 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
                           type="radio"
                           name={`question-${question.id}`}
                           id={`question-${question.id}-option-${idx}`}
-                          className="text-blue-600"
+                          className="quiz-radio"
                         />
                         <label
                           htmlFor={`question-${question.id}-option-${idx}`}
+                          className="text-gray-700 dark:text-gray-300"
                         >
                           {option}
                         </label>
