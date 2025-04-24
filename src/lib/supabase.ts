@@ -1,15 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
-// Get the current environment
-const isDevelopment = import.meta.env.DEV;
-console.log('isDevelopment', isDevelopment);
-
-// Use the appropriate URL based on environment
-const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtdXZzYmFmdnJ2c2dkcGxodmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0OTY1ODIsImV4cCI6MjA1ODA3MjU4Mn0.rn_nhW2ongqXl2BoGY1wDGN7c0ojmd1iNX_xBQs3PBo'
+// Supabase configuration
+const supabaseUrl = 'https://bmuvsbafvrvsgdplhvgp.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtdXZzYmFmdnJ2c2dkcGxodmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0OTY1ODIsImV4cCI6MjA1ODA3MjU4Mn0.rn_nhW2ongqXl2BoGY1wDGN7c0ojmd1iNX_xBQs3PBo';
 
 if (!supabaseUrl) {
   throw new Error('Missing Supabase URL');
@@ -19,20 +15,16 @@ if (!supabaseKey) {
   throw new Error('Missing Supabase Key');
 }
 
+
 const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
-  },
-  global: {
-    headers: {
-      'Access-Control-Allow-Origin': '*'
-    }
+    detectSessionInUrl: true,
   },
   db: {
-    schema: 'public'
-  }
+    schema: 'public',
+  },
 });
 
 // Named export for supabase
@@ -51,24 +43,39 @@ export async function updateUsageCount(userId: string) {
       .eq('id', userId)
       .single();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      throw fetchError;
-    }
+    if (fetchError) {
+      if (fetchError.code === '42P01') {
+        // Users table doesn't exist, create it or handle gracefully
+        console.warn('Users table does not exist. Initializing user data.');
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ id: userId, usage_count: 1, plan: 'free' }]);
 
-    if (!user) {
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert([{ id: userId, usage_count: 1 }]);
-      
-      if (insertError) throw insertError;
-      return { success: true, remaining: 2 };
+        if (insertError) {
+          if (insertError.code === '42P01') {
+            throw new Error('Users table does not exist in the database. Please set up the table.');
+          }
+          throw insertError;
+        }
+        return { success: true, remaining: 2 };
+      }
+      if (fetchError.code === 'PGRST116') {
+        // No user found, insert new user
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ id: userId, usage_count: 1, plan: 'free' }]);
+
+        if (insertError) throw insertError;
+        return { success: true, remaining: 2 };
+      }
+      throw fetchError;
     }
 
     const now = new Date();
     const lastReset = user.last_reset ? new Date(user.last_reset) : new Date();
     const shouldReset = now.getTime() - lastReset.getTime() > 7 * 24 * 60 * 60 * 1000;
 
-    const newCount = shouldReset ? 1 : user.usage_count + 1;
+    const newCount = shouldReset ? 1 : (user.usage_count || 0) + 1;
     const remaining = user.plan === 'premium' ? 'unlimited' : 3 - newCount;
 
     if (user.plan !== 'premium' && newCount > 3) {
@@ -78,8 +85,9 @@ export async function updateUsageCount(userId: string) {
     const { error: updateError } = await supabase
       .from('users')
       .update({
-        usage_count: shouldReset ? 1 : newCount,
-        last_reset: shouldReset ? now.toISOString() : user.last_reset
+        usage_count: newCount,
+        last_reset: shouldReset ? now.toISOString() : user.last_reset,
+        plan: user.plan || 'free',
       })
       .eq('id', userId);
 
@@ -111,7 +119,7 @@ export const useAuth = () => {
       }
     });
 
-    // Fetching the current session when the application initializes
+    // Fetch the current session when the application initializes
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         console.log('Existing session detected:', session);
@@ -121,6 +129,7 @@ export const useAuth = () => {
       }
     }).catch((error) => {
       console.error('Error fetching session:', error);
+      navigate('/login');
     });
 
     return () => subscription.unsubscribe();

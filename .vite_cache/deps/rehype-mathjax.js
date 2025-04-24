@@ -8,7 +8,7 @@ import {
   parse2,
   svg,
   visitParents
-} from "./chunk-FQ43OAGO.js";
+} from "./chunk-L5GLTWO4.js";
 import {
   __commonJS,
   __toESM

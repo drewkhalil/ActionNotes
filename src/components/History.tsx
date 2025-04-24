@@ -3,23 +3,15 @@ import { Card, CardHeader, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Trash2, Download } from 'lucide-react';
-import { supabase, SupabaseUser } from "@/lib/supabase"; // Fix import to use SupabaseUser
-
-// Define AppUser type to match App.tsx
-interface AppUser extends SupabaseUser {
-  usage_count?: number | null;
-  last_reset?: string | null;
-  plan?: string | null;
-  created_at: string; // Align with SupabaseUser (remove 'null | undefined')
-  email?: string | undefined;
-}
+import { supabase } from '@/lib/supabase';
+import { AppUser } from '@/types/types';
 
 interface HistoryItem {
   id: string;
   type: 'recap' | 'lesson' | 'flashcards' | 'quiz';
   title: string;
   content: string;
-  pdf_path?: string;
+  pdf_path?: string | null;
   created_at: string;
 }
 
@@ -31,6 +23,7 @@ export function History({ user }: HistoryProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -46,16 +39,27 @@ export function History({ user }: HistoryProps) {
 
     try {
       setIsLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('history')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') {
+          // Table doesn't exist
+          setError('History table not found. Please contact support.');
+          setHistory([]);
+          return;
+        }
+        throw error;
+      }
       setHistory(data || []);
     } catch (error) {
       console.error('Error fetching history:', error);
+      setError('Failed to load history. Please try again later.');
+      setHistory([]);
     } finally {
       setIsLoading(false);
     }
@@ -68,14 +72,17 @@ export function History({ user }: HistoryProps) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Delete expired history items
+      // Fetch expired history items
       const { data: expiredItems, error: fetchError } = await supabase
         .from('history')
         .select('id, pdf_path')
         .eq('user_id', user.id)
         .lt('created_at', thirtyDaysAgo.toISOString());
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        if (fetchError.code === '42P01') return; // Table doesn't exist, skip cleanup
+        throw fetchError;
+      }
 
       // Delete associated PDFs from storage
       for (const item of expiredItems || []) {
@@ -93,14 +100,17 @@ export function History({ user }: HistoryProps) {
         .eq('user_id', user.id)
         .lt('created_at', thirtyDaysAgo.toISOString());
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        if (deleteError.code === '42P01') return; // Table doesn't exist, skip
+        throw deleteError;
+      }
       fetchHistory(); // Refresh the list after cleanup
     } catch (error) {
       console.error('Error cleaning up expired items:', error);
     }
   };
 
-  const handleDelete = async (id: string, pdfPath?: string) => {
+  const handleDelete = async (id: string, pdfPath?: string | null) => {
     if (!user) return;
 
     try {
@@ -118,10 +128,17 @@ export function History({ user }: HistoryProps) {
         .eq('id', id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01') {
+          setError('History table not found. Please contact support.');
+          return;
+        }
+        throw error;
+      }
       fetchHistory();
     } catch (error) {
       console.error('Error deleting item:', error);
+      setError('Failed to delete history item. Please try again.');
     }
   };
 
@@ -177,6 +194,13 @@ export function History({ user }: HistoryProps) {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4 text-red-700">
+            {error}
+          </CardContent>
+        </Card>
+      )}
       <div className="flex items-center space-x-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />

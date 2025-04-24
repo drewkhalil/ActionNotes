@@ -5,7 +5,6 @@ import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { clearUserHistory } from "../lib/pdfUtils";
 import { useSubscription } from "../contexts/SubscriptionContext";
 
 interface SettingsProps {
@@ -26,10 +25,16 @@ export function Settings({ onLogout }: SettingsProps) {
   });
   const [isClearingHistory, setIsClearingHistory] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error fetching user:", error);
+        setError("Failed to authenticate. Please log in again.");
+        return;
+      }
       if (user) {
         setUser(user);
         fetchPreferences(user.id);
@@ -50,21 +55,28 @@ export function Settings({ onLogout }: SettingsProps) {
         .eq("user_id", userId)
         .single();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) {
+        if (error.code === "PGRST116") {
+          // No preferences found, use defaults
+          setPreferences({ autoSave: true, pdfRetentionDays: 30 });
+          return;
+        }
+        throw error;
+      }
       if (data) {
         setPreferences({
-          autoSave: data.auto_save,
-          pdfRetentionDays: data.pdf_retention_days,
+          autoSave: data.auto_save ?? true,
+          pdfRetentionDays: data.pdf_retention_days ?? 30,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching preferences:", error);
+      setError("Failed to load preferences. Using default settings.");
+      setPreferences({ autoSave: true, pdfRetentionDays: 30 });
     }
   };
 
-  const updatePreferences = async (
-    newPreferences: Partial<UserPreferences>,
-  ) => {
+  const updatePreferences = async (newPreferences: Partial<UserPreferences>) => {
     try {
       const updatedPreferences = { ...preferences, ...newPreferences };
       const { error } = await supabase.from("user_preferences").upsert({
@@ -76,8 +88,39 @@ export function Settings({ onLogout }: SettingsProps) {
 
       if (error) throw error;
       setPreferences(updatedPreferences);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating preferences:", error);
+      setError("Failed to update preferences.");
+    }
+  };
+
+  const clearUserHistory = async (userId: string) => {
+    try {
+      // Fetch history items to delete associated PDFs
+      const { data: historyItems, error: fetchError } = await supabase
+        .from("history")
+        .select("id, pdf_path")
+        .eq("user_id", userId);
+
+      if (fetchError) throw fetchError;
+
+      // Delete PDFs from storage
+      for (const item of historyItems || []) {
+        if (item.pdf_path) {
+          await supabase.storage.from("history_pdfs").remove([item.pdf_path]);
+        }
+      }
+
+      // Delete history entries
+      const { error: deleteError } = await supabase
+        .from("history")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+    } catch (error: any) {
+      console.error("Error clearing user history:", error);
+      throw error;
     }
   };
 
@@ -94,7 +137,7 @@ export function Settings({ onLogout }: SettingsProps) {
     try {
       await clearUserHistory(user.id);
       alert("History cleared successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error clearing history:", error);
       alert("Failed to clear history. Please try again.");
     } finally {
@@ -106,7 +149,7 @@ export function Settings({ onLogout }: SettingsProps) {
     setIsLoggingOut(true);
     try {
       await onLogout();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during logout:", error);
       alert("Failed to log out. Please try again.");
     } finally {
@@ -123,7 +166,9 @@ export function Settings({ onLogout }: SettingsProps) {
           </CardHeader>
           <CardContent>
             <p>Please log in to access settings.</p>
-            <Button onClick={() => window.location.href = '/login'}>Go to Login</Button>
+            <Button onClick={() => (window.location.href = '/login')}>
+              Go to Login
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -132,6 +177,11 @@ export function Settings({ onLogout }: SettingsProps) {
 
   return (
     <div className="container mx-auto p-4">
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
       <Card>
         <CardHeader>
           <h2 className="text-2xl font-bold">Settings</h2>
@@ -170,7 +220,7 @@ export function Settings({ onLogout }: SettingsProps) {
                     pdfRetentionDays: Number(e.target.value),
                   })
                 }
-                className="border rounded-md px-3 py-2"
+                className="border rounded-md px-3 py-2 border-gray-300 focus:border-[#F87171] focus:ring-[#F87171] text-gray-900 dark:text-white"
               >
                 <option value="7">7 days</option>
                 <option value="30">30 days</option>

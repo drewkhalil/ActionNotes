@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* Disable Radix Dialog overlay */
+[data-radix-overlay] {
+    background: none !important;
+    pointer-events: none !important;
+  }

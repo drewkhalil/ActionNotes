@@ -1,143 +1,121 @@
-import React, { useState, useRef, useEffect } from 'react';
-import PricingModal from "./PricingModal";
-import { FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu, Settings as SettingsIcon, History, HelpCircle, BookOpen, Brain, FileQuestion, Home, Bookmark, PenSquare, Calendar } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from './lib/supabase';
+import { StudyTechniques } from './components/StudyTechniques';
+import PricingModal from './components/PricingModal';
+import {
+  FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu,
+  Settings as SettingsIcon, History, HelpCircle, BookOpen, Brain, FileQuestion, Home,
+  Bookmark, PenSquare, Lightbulb, Mail, Lock, User,
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import ReactMarkdown from 'react-markdown';
-import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
-import Login from './components/Login';
 import { Settings } from './components/Settings';
 import { History as HistoryComponent } from './components/History';
 import ThinkFast from './components/ThinkFast';
 import Quiz from './components/Quiz';
-import { supabase, SupabaseUser } from './lib/supabase';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import TeachMe from './components/TeachMe';
 import RecapMe from './components/RecapMe';
 import MathJax from 'react-mathjax2';
-import ReMinder from './components/reminder';
+import { AppUser } from './types/types';
+import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 
-// Define custom AppUser type to extend Supabase Auth User
-interface AppUser extends SupabaseUser {
-  usage_count?: number | null;
-  last_reset?: string | null;
-  plan?: string | null;
-  created_at: string;
-  email?: string | undefined;
-}
-
-// Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-
-function App() {
-  const [user, setUser] = useState<AppUser | null>(null);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Session check:', session);
-        if (session?.user) {
-          setUser(session.user as AppUser);
-          localStorage.setItem('userId', session.user.id);
-        } else {
-          console.log('No active session found. User is logged out.');
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', session);
-      setUser(session?.user as AppUser | null ?? null);
-      if (session?.user) {
-        localStorage.setItem('userId', session.user.id);
-      } else {
-        localStorage.removeItem('userId');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
-
-  return (
-    <SubscriptionProvider>
-      <Elements stripe={stripePromise}>
-        <MainApp user={user} setUser={setUser} />
-      </Elements>
-    </SubscriptionProvider>
-  );
-}
 
 type Summary = {
   sections: { title: string; content: string[] }[];
   timestamp: string;
 };
 
-interface MainAppProps {
-  user: AppUser | null;
-  setUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
-}
-
-function MainApp({ user, setUser }: MainAppProps) {
+function App() {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'main' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'reminder'>('main');
-
+  const [activeView, setActiveView] = useState<
+    'main' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'studyTechniques'
+  >('main');
   const [recentSummaries] = useState<Summary[]>([
-    { sections: [{ title: "Recent Summary 1", content: ["Content from your last summary..."] }], timestamp: "2024-03-10 14:30" }
+    { sections: [{ title: 'Recent Summary 1', content: ['Content from your last summary...'] }], timestamp: '2024-03-10 14:30' },
   ]);
-
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      localStorage.removeItem('userId');
-      localStorage.removeItem('usageCounts');
-      localStorage.removeItem('userPlan');
-      localStorage.removeItem('lastUsageReset');
-      
-      setUser(null);
-      setActiveView('main');
-      setIsSidebarOpen(false);
-      setSummary(null);
-      setInput('');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      alert('Failed to sign out. Please try again.');
-    }
-  };
-
-  const updateUsageCount = async (userId: string) => {
-    await fetch("/api/updateUsage", {
-      method: "POST",
-      body: JSON.stringify({ userId }),
-      headers: { "Content-Type": "application/json" }
-    });
-  };
-
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          username: session.user.user_metadata?.username || '',
+          created_at: session.user.created_at,
+          app_metadata: session.user.app_metadata || {},
+          user_metadata: session.user.user_metadata || {},
+          aud: session.user.aud,
+        });
+        setShowAuthModal(false);
+      } else {
+        setShowAuthModal(true);
+      }
+
+      supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Supabase auth event:', event, 'Session:', session);
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            username: session.user.user_metadata?.username || '',
+            created_at: session.user.created_at,
+            app_metadata: session.user.app_metadata || {},
+            user_metadata: session.user.user_metadata || {},
+            aud: session.user.aud,
+          });
+          setShowAuthModal(false);
+          setError(null);
+          localStorage.setItem('userId', session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setShowAuthModal(true);
+          localStorage.clear();
+        } else if (event === 'USER_UPDATED') {
+          setUser({
+            id: session?.user.id || '',
+            email: session?.user.email,
+            username: session?.user.user_metadata?.username || '',
+            created_at: session?.user.created_at || new Date().toISOString(),
+            app_metadata: session?.user.app_metadata || {},
+            user_metadata: session?.user.user_metadata || {},
+            aud: session?.user.aud || 'authenticated',
+          });
+        }
+      });
+    };
+
+    initializeAuth();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const sidebar = document.getElementById('sidebar');
       const hamburger = document.getElementById('hamburger-button');
-      if (sidebar && hamburger && 
-          !sidebar.contains(event.target as Node) && 
-          !hamburger.contains(event.target as Node)) {
+      if (
+        sidebar &&
+        hamburger &&
+        !sidebar.contains(event.target as Node) &&
+        !hamburger.contains(event.target as Node)
+      ) {
         setIsSidebarOpen(false);
       }
     };
@@ -146,6 +124,73 @@ function MainApp({ user, setUser }: MainAppProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleEmailAuth = async () => {
+    setError(null);
+    try {
+      if (isSignup) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { username },
+          },
+        });
+        if (error) throw error;
+        setError('Please check your email to verify your account.');
+        setIsSignup(false);
+        setUsername(''); // Clear username field after signup
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(err.message || 'Authentication failed. Please try again.');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      setError(err.message || 'Google sign-in failed. Please try again.');
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setShowAuthModal(true);
+  };
+
+  const updateUsageCount = async (userId: string) => {
+    await fetch('/api/updateUsage', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  const handleFeatureClick = (view: typeof activeView) => {
+    if (!user) {
+      setShowAuthModal(true);
+    } else {
+      setActiveView(view);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -153,22 +198,22 @@ function MainApp({ user, setUser }: MainAppProps) {
     setIsProcessing(true);
 
     try {
-      const userId = localStorage.getItem("userId");
+      const userId = localStorage.getItem('userId');
       if (!userId) {
-        alert("⚠️ Error: Missing user ID. Please log in.");
+        alert('⚠️ Error: Missing user ID. Please log in.');
         setIsProcessing(false);
         return;
       }
 
       if (!user) {
-        alert("⚠️ Error: User not found. Please log in.");
+        alert('⚠️ Error: User not found. Please log in.');
         setIsProcessing(false);
         return;
       }
 
-      const usageResponse = await fetch("http://localhost:4242/api/updateUsage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const usageResponse = await fetch('https://actionnotes-production.up.railway.app/api/updateUsage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
 
@@ -191,20 +236,20 @@ function MainApp({ user, setUser }: MainAppProps) {
           type: 'recap',
           title: 'Summary',
           content: summary.sections[0].content.join('\n'),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
 
       if (error) throw error;
 
-      if (usageData.remaining !== "unlimited") {
-        localStorage.setItem("summaryUsage", JSON.stringify({
-          count: 3 - usageData.remaining, 
+      if (usageData.remaining !== 'unlimited') {
+        localStorage.setItem('summaryUsage', JSON.stringify({
+          count: 3 - usageData.remaining,
           lastReset: Date.now(),
         }));
       }
     } catch (error: any) {
-      console.error("❌ Error:", error);
-      alert("Something went wrong. Please try again.");
+      console.error('❌ Error:', error);
+      alert('Something went wrong. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -229,7 +274,7 @@ function MainApp({ user, setUser }: MainAppProps) {
             type: 'lesson',
             title: 'Interactive Lesson',
             content: input,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
           });
 
         if (error) throw error;
@@ -250,16 +295,16 @@ function MainApp({ user, setUser }: MainAppProps) {
     setIsProcessing(true);
 
     try {
-      if (fileType === "txt" || fileType === "md") {
+      if (fileType === 'txt' || fileType === 'md') {
         const text = await file.text();
         setInput(text);
         const summary = await generateSummary(text);
         setSummary(summary);
       } else {
-        alert("Unsupported file format. Please convert to .txt before uploading.");
+        alert('Unsupported file format. Please convert to .txt before uploading.');
       }
     } catch (error) {
-      console.error("Error processing file:", error);
+      console.error('Error processing file:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -275,7 +320,7 @@ function MainApp({ user, setUser }: MainAppProps) {
             type: 'summary',
             title: 'Summary',
             content: text,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
           });
 
         if (error) throw error;
@@ -283,11 +328,11 @@ function MainApp({ user, setUser }: MainAppProps) {
 
       return {
         timestamp: new Date().toLocaleString(),
-        sections: [{ title: "Summary", content: text.split("\n") }]
+        sections: [{ title: 'Summary', content: text.split('\n') }],
       };
     } catch (error: any) {
-      console.error("Error saving summary:", error);
-      throw new Error("Failed to save summary");
+      console.error('Error saving summary:', error);
+      throw new Error('Failed to save summary');
     }
   };
 
@@ -314,18 +359,18 @@ function MainApp({ user, setUser }: MainAppProps) {
       .trim();
   };
 
-  const handleSubscribe = async (plan: "starter" | "ultimate") => {
+  const handleSubscribe = async (plan: 'starter' | 'ultimate') => {
     try {
-      const userId = localStorage.getItem("userId");
+      const userId = localStorage.getItem('userId');
       if (!userId) {
-        alert("⚠️ Please log in before subscribing.");
+        alert('⚠️ Please log in before subscribing.');
         return;
       }
 
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ userId, plan }),
       });
 
@@ -338,7 +383,7 @@ function MainApp({ user, setUser }: MainAppProps) {
       const stripe = await stripePromise;
 
       if (!stripe) {
-        throw new Error("Stripe not initialized");
+        throw new Error('Stripe not initialized');
       }
 
       const result = await stripe.redirectToCheckout({ sessionId });
@@ -347,23 +392,23 @@ function MainApp({ user, setUser }: MainAppProps) {
         throw new Error(result.error.message);
       }
     } catch (error: any) {
-      console.error("Error starting checkout:", error);
+      console.error('Error starting checkout:', error);
       alert(`Failed to start checkout: ${error.message}`);
     }
   };
 
   const getSidebarLinkClasses = (isActive: boolean) => {
     return `flex items-center px-4 py-2 rounded-lg transition-colors duration-200 
-      ${isActive ? "bg-[#EAEAEA] text-[#1A1A1A]" : "bg-transparent text-[#1A1A1A]"}
+      ${isActive ? 'bg-[#EAEAEA] text-[#1A1A1A]' : 'bg-transparent text-[#1A1A1A]'}
       hover:text-[#1E3A5F] hover:bg-[#EAEAEA]`;
   };
 
   const downloadPDF = () => {
     if (!summary) return;
 
-    const printWindow = window.open("", "_blank");
+    const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert("Popup blocked! Allow popups for this site to download PDFs.");
+      alert('Popup blocked! Allow popups for this site to download PDFs.');
       return;
     }
 
@@ -384,9 +429,9 @@ function MainApp({ user, setUser }: MainAppProps) {
           ${summary.sections.map(section => `
               <h2>${section.title}</h2>
               <ul>
-                  ${section.content.map(line => `<li>${line}</li>`).join("")}
+                  ${section.content.map(line => `<li>${line}</li>`).join('')}
               </ul>
-          `).join("")}
+          `).join('')}
       </body>
       </html>
     `);
@@ -422,7 +467,6 @@ function MainApp({ user, setUser }: MainAppProps) {
       if (line.includes('|')) {
         const cells = line.split('|').filter(cell => cell.trim());
         const isHeader = lines[index + 1]?.includes('---');
-        
         return (
           <div key={index} className="flex gap-4 mb-4">
             {cells.map((cell, cellIndex) => (
@@ -519,10 +563,9 @@ function MainApp({ user, setUser }: MainAppProps) {
         <h1 className="text-4xl font-bold text-[#1A1A1A] mb-2">Action Notes</h1>
         <p className="text-lg text-[#4A4F57]">Transform your learning experience with AI-powered tools</p>
       </div>
-      
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         <div 
-          onClick={() => setActiveView('teach')}
+          onClick={() => handleFeatureClick('teach')}
           className="bg-[#D6BCFA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
@@ -533,9 +576,8 @@ function MainApp({ user, setUser }: MainAppProps) {
             </p>
           </div>
         </div>
-
         <div 
-          onClick={() => setActiveView('recap')}
+          onClick={() => handleFeatureClick('recap')}
           className="bg-[#C6F6D5] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
@@ -546,22 +588,20 @@ function MainApp({ user, setUser }: MainAppProps) {
             </p>
           </div>
         </div>
-
         <div 
-          onClick={() => setActiveView('reminder')}
-          className="bg-[#B2F5EA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
+          onClick={() => handleFeatureClick('studyTechniques')}
+          className="bg-[#4FD1C5] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
-            <Calendar className="h-16 w-16 mb-4 text-[#1E3A5F]" />
-            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">ReMinder</h2>
+            <Lightbulb className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">StudyTechniques</h2>
             <p className="text-center text-[#4A4F57]">
-              Plan your study schedule with an AI generated schedule personalized for your upcoming tests
+              Learn and apply effective study methods meant to induce proper study habits
             </p>
           </div>
         </div>
-
         <div 
-          onClick={() => setActiveView('quiz')}
+          onClick={() => handleFeatureClick('quiz')}
           className="bg-[#FECACA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
@@ -572,9 +612,8 @@ function MainApp({ user, setUser }: MainAppProps) {
             </p>
           </div>
         </div>
-
         <div 
-          onClick={() => setActiveView('flashcards')}
+          onClick={() => handleFeatureClick('flashcards')}
           className="bg-[#FED7AA] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
@@ -593,34 +632,20 @@ function MainApp({ user, setUser }: MainAppProps) {
     switch (activeView) {
       case 'main':
         return renderHomepage();
-
       case 'history':
-        return (
-          <div className="max-w-7xl mx-auto">
-            <HistoryComponent user={user} />
-          </div>
-        );
-
+        return <HistoryComponent user={user} />;
       case 'settings':
-        return (
-          <Settings onLogout={handleLogout} />
-        );
-
+        return <Settings onLogout={handleLogout} />;
       case 'flashcards':
         return <ThinkFast />;
-
+      case 'studyTechniques':
+        return <StudyTechniques user={user} />;
       case 'quiz':
         return <Quiz />;
-
       case 'teach':
         return <TeachMe />;
-
       case 'recap':
         return <RecapMe />;
-
-      case 'reminder':
-        return <ReMinder />;
-
       default:
         return null;
     }
@@ -630,6 +655,93 @@ function MainApp({ user, setUser }: MainAppProps) {
     <SubscriptionProvider>
       <Elements stripe={stripePromise}>
         <div className="min-h-screen transition-colors duration-200">
+          {/* Auth Modal */}
+          <Dialog open={showAuthModal && !user} onOpenChange={setShowAuthModal}>
+            {(showAuthModal && !user) && (
+              <div className="fixed inset-0 bg-black/50 z-40" aria-hidden="true" />
+            )}
+            <DialogContent className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 sm:max-w-[500px] bg-[#FFFFFF] p-8 rounded-lg shadow-lg z-50">
+              <div className="text-center mb-4">
+                <h1 className="text-2xl font-bold text-[#1A1A1A]">Action Notes</h1>
+              </div>
+              <DialogTitle className="text-2xl font-bold text-[#1A1A1A] text-center">
+                {isSignup ? 'Sign Up' : 'Log In'}
+              </DialogTitle>
+              <div className="space-y-4 mt-4">
+                {isSignup && (
+                  <div className="flex items-center space-x-2">
+                    <User className="h-5 w-5 text-[#4A4F57]" />
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={username}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                      className="w-full px-3 py-2 border border-[#EAEAEA] rounded-md focus:border-[#1E3A5F] focus:ring-1 focus:ring-[#1E3A5F] text-[#4A4F57]"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-5 w-5 text-[#4A4F57]" />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#EAEAEA] rounded-md focus:border-[#1E3A5F] focus:ring-1 focus:ring-[#1E3A5F] text-[#4A4F57]"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Lock className="h-5 w-5 text-[#4A4F57]" />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#EAEAEA] rounded-md focus:border-[#1E3A5F] focus:ring-1 focus:ring-[#1E3A5F] text-[#4A4F57]"
+                  />
+                </div>
+                <button
+                  onClick={handleEmailAuth}
+                  className="w-full bg-[#1E3A8A] hover:bg-[#1A2F6D] text-white py-2 rounded-md"
+                >
+                  {isSignup ? 'Sign Up' : 'Log In'}
+                </button>
+                <button
+                  onClick={handleGoogleSignIn}
+                  className="w-full bg-[#FFFFFF] border border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#EAEAEA] py-2 rounded-md flex items-center justify-center"
+                >
+                  <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-1.01 7.28-2.74l-3.57-2.77c-1.02.68-2.31 1.08-3.71 1.08-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C4.01 20.56 7.85 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.85 1 4.01 3.44 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  Sign in with Google
+                </button>
+                <div className="text-center">
+                  <button
+                    onClick={() => setIsSignup(!isSignup)}
+                    className="text-[#1E3A5F] hover:underline"
+                  >
+                    {isSignup ? 'Already have an account? Log in' : "Don't have an account? Sign up"}
+                  </button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <div
             id="sidebar"
             className={`fixed inset-y-0 left-0 z-30 w-64 bg-[#FFFFFF] shadow-lg transform transition-transform duration-200 ease-in-out ${
@@ -654,39 +766,39 @@ function MainApp({ user, setUser }: MainAppProps) {
                   Home
                 </button>
                 <button
-                  onClick={() => setActiveView('teach')}
+                  onClick={() => handleFeatureClick('teach')}
                   className={getSidebarLinkClasses(activeView === 'teach')}
                 >
-                  <BookOpen className="h-5 w-5 mr-2" />
+                  <Brain className="h-5 w-5 mr-2" />
                   TeachMeThat
                 </button>
                 <button
-                  onClick={() => setActiveView('recap')}
+                  onClick={() => handleFeatureClick('studyTechniques')}
+                  className={getSidebarLinkClasses(activeView === 'studyTechniques')}
+                >
+                  <Lightbulb className="h-5 w-5 mr-2" />
+                  StudyTechniques
+                </button>
+                <button
+                  onClick={() => handleFeatureClick('recap')}
                   className={getSidebarLinkClasses(activeView === 'recap')}
                 >
                   <FileText className="h-5 w-5 mr-2" />
                   RecapMe
                 </button>
                 <button
-                  onClick={() => setActiveView('flashcards')}
+                  onClick={() => handleFeatureClick('flashcards')}
                   className={getSidebarLinkClasses(activeView === 'flashcards')}
                 >
                   <Bookmark className="h-5 w-5 mr-2" />
                   ThinkFast
                 </button>
                 <button
-                  onClick={() => setActiveView('quiz')}
+                  onClick={() => handleFeatureClick('quiz')}
                   className={getSidebarLinkClasses(activeView === 'quiz')}
                 >
                   <PenSquare className="h-5 w-5 mr-2" />
                   QuickQuizzer
-                </button>
-                <button
-                  onClick={() => setActiveView('reminder')}
-                  className={getSidebarLinkClasses(activeView === 'reminder')}
-                >
-                  <Calendar className="h-5 w-5 mr-2" />
-                  ReMinder
                 </button>
                 <button
                   onClick={() => setActiveView('history')}
@@ -717,17 +829,35 @@ function MainApp({ user, setUser }: MainAppProps) {
                   <Menu className="h-6 w-6" />
                 </button>
                 <div className="flex items-center space-x-4">
-                  {/* Theme toggle button removed */}
+                  {error && (
+                    <span className="text-red-600 text-sm font-medium bg-red-100 px-3 py-1 rounded">
+                      {error}
+                    </span>
+                  )}
+                  {user ? (
+                    <>
+                      <span className="text-[#1A1A1A]">{user.email}</span>
+                      <button
+                        onClick={handleLogout}
+                        className="text-sm font-medium text-white bg-[#1E3A8A] hover:bg-[#1A2F6D] px-4 py-2 rounded-md"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setShowAuthModal(true)}
+                      className="text-sm font-medium text-white bg-[#1E3A8A] hover:bg-[#1A2F6D] px-4 py-2 rounded-md"
+                    >
+                      Login / Signup
+                    </button>
+                  )}
                 </div>
               </div>
             </header>
 
             <main className="container mx-auto px-4 py-8">
-              {activeView === 'settings' ? (
-                <Settings onLogout={handleLogout} />
-              ) : (
-                renderMainContent()
-              )}
+              {renderMainContent()}
             </main>
           </div>
 
