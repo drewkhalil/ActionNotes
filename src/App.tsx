@@ -3,9 +3,8 @@ import { supabase } from './lib/supabase';
 import { StudyTechniques } from './components/StudyTechniques';
 import PricingModal from './components/PricingModal';
 import {
-  FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download, Menu,
-  Settings as SettingsIcon, History, HelpCircle, BookOpen, Brain, FileQuestion, Home,
-  Bookmark, PenSquare, Lightbulb, Mail, Lock, User,
+  FileText, Upload, Clock, CheckCircle2, AlertCircle, X, Zap, Infinity, Download,
+  HelpCircle, Brain, Bookmark, PenSquare, Mail, Lock, User, Wrench, Search, Bell, Settings as SettingsIcon,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import ReactMarkdown from 'react-markdown';
@@ -13,23 +12,22 @@ import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
-import { Settings } from './components/Settings';
-import { History as HistoryComponent } from './components/History';
 import ThinkFast from './components/ThinkFast';
 import Quiz from './components/Quiz';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import TeachMe from './components/TeachMe';
 import RecapMe from './components/RecapMe';
 import MathJax from 'react-mathjax2';
-import { AppUser } from './types/types';
+import { AppUser, Summary } from './types/types';
 import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import ProjectPage from './components/ProjectPage';
+import { Homepage } from './components/Homepage';
+import './index.css';
+import CalendarPage from './components/CalendarPage';
+import Settings from './components/Settings';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-
-type Summary = {
-  sections: { title: string; content: string[] }[];
-  timestamp: string;
-};
 
 function App() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -38,12 +36,18 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<
-    'main' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'studyTechniques'
-  >('main');
+    'home' | 'tools' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'studyTechniques'
+  >('home');
   const [recentSummaries] = useState<Summary[]>([
-    { sections: [{ title: 'Recent Summary 1', content: ['Content from your last summary...'] }], timestamp: '2024-03-10 14:30' },
+    {
+      id: 'some-id',
+      project_id: 'some-project-id',
+      content: 'Content from your last summary...',
+      created_at: new Date().toISOString(),
+      sections: [{ title: 'Recent Summary 1', content: ['Content from your last summary...'] }],
+    },
   ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -54,25 +58,9 @@ function App() {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          username: session.user.user_metadata?.username || '',
-          created_at: session.user.created_at,
-          app_metadata: session.user.app_metadata || {},
-          user_metadata: session.user.user_metadata || {},
-          aud: session.user.aud,
-        });
-        setShowAuthModal(false);
-      } else {
-        setShowAuthModal(true);
-      }
-
-      supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Supabase auth event:', event, 'Session:', session);
-        if (event === 'SIGNED_IN' && session?.user) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
           setUser({
             id: session.user.id,
             email: session.user.email,
@@ -83,52 +71,55 @@ function App() {
             aud: session.user.aud,
           });
           setShowAuthModal(false);
-          setError(null);
-          localStorage.setItem('userId', session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+        } else {
           setShowAuthModal(true);
-          localStorage.clear();
-        } else if (event === 'USER_UPDATED') {
-          setUser({
-            id: session?.user.id || '',
-            email: session?.user.email,
-            username: session?.user.user_metadata?.username || '',
-            created_at: session?.user.created_at || new Date().toISOString(),
-            app_metadata: session?.user.app_metadata || {},
-            user_metadata: session?.user.user_metadata || {},
-            aud: session?.user.aud || 'authenticated',
-          });
         }
-      });
-    };
 
-    initializeAuth();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const sidebar = document.getElementById('sidebar');
-      const hamburger = document.getElementById('hamburger-button');
-      if (
-        sidebar &&
-        hamburger &&
-        !sidebar.contains(event.target as Node) &&
-        !hamburger.contains(event.target as Node)
-      ) {
-        setIsSidebarOpen(false);
+        supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Supabase auth event:', event, 'Session:', session);
+          if (event === 'SIGNED_IN' && session?.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              username: session.user.user_metadata?.username || '',
+              created_at: session.user.created_at,
+              app_metadata: session.user.app_metadata || {},
+              user_metadata: session.user.user_metadata || {},
+              aud: session.user.aud,
+            });
+            setShowAuthModal(false);
+            setError(null);
+            localStorage.setItem('userId', session.user.id);
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setShowAuthModal(true);
+            localStorage.clear();
+          } else if (event === 'USER_UPDATED') {
+            setUser({
+              id: session?.user.id || '',
+              email: session?.user.email,
+              username: session?.user.user_metadata?.username || '',
+              created_at: session?.user.created_at || new Date().toISOString(),
+              app_metadata: session?.user.app_metadata || {},
+              user_metadata: session?.user.user_metadata || {},
+              aud: session?.user.aud || 'authenticated',
+            });
+          }
+        });
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        setError('Failed to initialize authentication. Please try again.');
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    initializeAuth();
   }, []);
 
   const handleEmailAuth = async () => {
     setError(null);
     try {
       if (isSignup) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -139,7 +130,7 @@ function App() {
         if (error) throw error;
         setError('Please check your email to verify your account.');
         setIsSignup(false);
-        setUsername(''); // Clear username field after signup
+        setUsername('');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -153,34 +144,34 @@ function App() {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
   const handleGoogleSignIn = async () => {
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
         },
       });
       if (error) throw error;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && !user.user_metadata?.username) {
+        const username = prompt('Please enter your username:');
+        if (username) {
+          await supabase.auth.updateUser({
+            data: { username },
+          });
+        }
+      }
     } catch (err: any) {
       console.error('Google sign-in error:', err);
       setError(err.message || 'Google sign-in failed. Please try again.');
     }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setShowAuthModal(true);
-  };
-
-  const updateUsageCount = async (userId: string) => {
-    await fetch('/api/updateUsage', {
-      method: 'POST',
-      body: JSON.stringify({ userId }),
-      headers: { 'Content-Type': 'application/json' },
-    });
   };
 
   const handleFeatureClick = (view: typeof activeView) => {
@@ -188,6 +179,7 @@ function App() {
       setShowAuthModal(true);
     } else {
       setActiveView(view);
+      navigate('/');
     }
   };
 
@@ -235,7 +227,7 @@ function App() {
           user_id: user.id,
           type: 'recap',
           title: 'Summary',
-          content: summary.sections[0].content.join('\n'),
+          content: summary.sections && summary.sections.length > 0 ? summary.sections[0].content.join('\n') : '',
           created_at: new Date().toISOString(),
         });
 
@@ -310,7 +302,7 @@ function App() {
     }
   };
 
-  const generateSummary = async (text: string) => {
+  const generateSummary = async (text: string): Promise<Summary> => {
     try {
       if (user?.id) {
         const { error } = await supabase
@@ -327,7 +319,10 @@ function App() {
       }
 
       return {
-        timestamp: new Date().toLocaleString(),
+        id: 'some-id',
+        project_id: 'some-project-id',
+        content: text,
+        created_at: new Date().toISOString(),
         sections: [{ title: 'Summary', content: text.split('\n') }],
       };
     } catch (error: any) {
@@ -397,12 +392,6 @@ function App() {
     }
   };
 
-  const getSidebarLinkClasses = (isActive: boolean) => {
-    return `flex items-center px-4 py-2 rounded-lg transition-colors duration-200 
-      ${isActive ? 'bg-[#EAEAEA] text-[#1A1A1A]' : 'bg-transparent text-[#1A1A1A]'}
-      hover:text-[#1E3A5F] hover:bg-[#EAEAEA]`;
-  };
-
   const downloadPDF = () => {
     if (!summary) return;
 
@@ -426,12 +415,14 @@ function App() {
       </head>
       <body>
           <h1>Summary</h1>
-          ${summary.sections.map(section => `
-              <h2>${section.title}</h2>
+          {summary.sections && summary.sections.map(section => (
+            <div key={section.title}>
+              <h2>{section.title}</h2>
               <ul>
-                  ${section.content.map(line => `<li>${line}</li>`).join('')}
+                {section.content.map(line => <li key={line}>{line}</li>)}
               </ul>
-          `).join('')}
+            </div>
+          ))}
       </body>
       </html>
     `);
@@ -557,7 +548,7 @@ function App() {
     });
   };
 
-  const renderHomepage = () => (
+  const renderToolpage = () => (
     <div className="space-y-8 bg-[#FFFFFF]">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-[#1A1A1A] mb-2">Action Notes</h1>
@@ -581,7 +572,7 @@ function App() {
           className="bg-[#C6F6D5] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
-            <FileQuestion className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <FileText className="h-16 w-16 mb-4 text-[#1E3A5F]" />
             <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">RecapMe</h2>
             <p className="text-center text-[#4A4F57]">
               Convert your meeting notes into clear, structured summaries instantly
@@ -593,7 +584,7 @@ function App() {
           className="bg-[#4FD1C5] p-6 rounded-lg shadow-md cursor-pointer transition-all duration-300"
         >
           <div className="flex flex-col items-center">
-            <Lightbulb className="h-16 w-16 mb-4 text-[#1E3A5F]" />
+            <PenSquare className="h-16 w-16 mb-4 text-[#1E3A5F]" />
             <h2 className="text-2xl font-bold mb-2 text-[#1A1A1A]">StudyTechniques</h2>
             <p className="text-center text-[#4A4F57]">
               Learn and apply effective study methods meant to induce proper study habits
@@ -630,14 +621,12 @@ function App() {
 
   const renderMainContent = () => {
     switch (activeView) {
-      case 'main':
-        return renderHomepage();
-      case 'history':
-        return <HistoryComponent user={user} />;
-      case 'settings':
-        return <Settings onLogout={handleLogout} />;
+      case 'home':
+        return <Homepage user={user} setActiveView={setActiveView} />;
+      case 'tools':
+        return renderToolpage();
       case 'flashcards':
-        return <ThinkFast />;
+        return <ThinkFast user={user} />;
       case 'studyTechniques':
         return <StudyTechniques user={user} />;
       case 'quiz':
@@ -647,7 +636,7 @@ function App() {
       case 'recap':
         return <RecapMe />;
       default:
-        return null;
+        return <div className="text-center text-[#4A4F57]">Invalid view</div>;
     }
   };
 
@@ -673,7 +662,7 @@ function App() {
                     <User className="h-5 w-5 text-[#4A4F57]" />
                     <input
                       type="text"
-                      placeholder="Username"
+                      placeholder="Name"
                       value={username}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
                       className="w-full px-3 py-2 border border-[#EAEAEA] rounded-md focus:border-[#1E3A5F] focus:ring-1 focus:ring-[#1E3A5F] text-[#4A4F57]"
@@ -713,7 +702,7 @@ function App() {
                   <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      d="M22.56 12.25c0-.78-.07-1.53-.20-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     />
                     <path
                       fill="#34A853"
@@ -742,122 +731,79 @@ function App() {
             </DialogContent>
           </Dialog>
 
-          <div
-            id="sidebar"
-            className={`fixed inset-y-0 left-0 z-30 w-64 bg-[#FFFFFF] shadow-lg transform transition-transform duration-200 ease-in-out ${
-              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-          >
-            <div className="flex flex-col h-full">
-              <div className="p-4 border-b border-[#EAEAEA]">
-                <h2 
-                  className="text-xl font-bold text-[#1A1A1A] cursor-pointer"
-                  onClick={() => setActiveView('main')}
+          <div className="bg-[#FFFFFF]">
+            <header className="sticky top-0 z-10 border-b bg-white">
+              <div className="w-full flex h-16 items-center justify-between px-4 md:px-6">
+                <div
+                  onClick={() => {
+                    setActiveView('home');
+                    navigate('/');
+                  }}
+                  className="flex items-center gap-2 cursor-pointer"
                 >
-                  Action Notes
-                </h2>
-              </div>
-              <nav className="flex-1 p-4 space-y-2">
-                <button
-                  onClick={() => setActiveView('main')}
-                  className={getSidebarLinkClasses(activeView === 'main')}
-                >
-                  <Home className="h-5 w-5 mr-2" />
-                  Home
-                </button>
-                <button
-                  onClick={() => handleFeatureClick('teach')}
-                  className={getSidebarLinkClasses(activeView === 'teach')}
-                >
-                  <Brain className="h-5 w-5 mr-2" />
-                  TeachMeThat
-                </button>
-                <button
-                  onClick={() => handleFeatureClick('studyTechniques')}
-                  className={getSidebarLinkClasses(activeView === 'studyTechniques')}
-                >
-                  <Lightbulb className="h-5 w-5 mr-2" />
-                  StudyTechniques
-                </button>
-                <button
-                  onClick={() => handleFeatureClick('recap')}
-                  className={getSidebarLinkClasses(activeView === 'recap')}
-                >
-                  <FileText className="h-5 w-5 mr-2" />
-                  RecapMe
-                </button>
-                <button
-                  onClick={() => handleFeatureClick('flashcards')}
-                  className={getSidebarLinkClasses(activeView === 'flashcards')}
-                >
-                  <Bookmark className="h-5 w-5 mr-2" />
-                  ThinkFast
-                </button>
-                <button
-                  onClick={() => handleFeatureClick('quiz')}
-                  className={getSidebarLinkClasses(activeView === 'quiz')}
-                >
-                  <PenSquare className="h-5 w-5 mr-2" />
-                  QuickQuizzer
-                </button>
-                <button
-                  onClick={() => setActiveView('history')}
-                  className={getSidebarLinkClasses(activeView === 'history')}
-                >
-                  <History className="h-5 w-5 mr-2" />
-                  History
-                </button>
-                <button
-                  onClick={() => setActiveView('settings')}
-                  className={getSidebarLinkClasses(activeView === 'settings')}
-                >
-                  <SettingsIcon className="h-5 w-5 mr-2" />
-                  Settings
-                </button>
-              </nav>
-            </div>
-          </div>
+                  <span className="text-xl font-bold text-[#1E3A8A]">Action Notes</span>
+                </div>
 
-          <div className={`transition-all duration-200 ${isSidebarOpen ? 'ml-64' : 'ml-0'} bg-[#FFFFFF]`}>
-            <header className="bg-[#FFFFFF] shadow-sm">
-              <div className="flex items-center justify-between px-4 py-3">
-                <button
-                  id="hamburger-button"
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="p-2 rounded-md text-[#1A1A1A] hover:text-[#1E3A5F]"
-                >
-                  <Menu className="h-6 w-6" />
-                </button>
-                <div className="flex items-center space-x-4">
+                <div className="relative mx-4 hidden flex-1 max-w-md md:flex">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                  <input
+                    type="search"
+                    placeholder="Search projects..."
+                    className="w-full bg-[#F5F5F5] pl-8 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#1E3A8A]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-4">
                   {error && (
                     <span className="text-red-600 text-sm font-medium bg-red-100 px-3 py-1 rounded">
                       {error}
                     </span>
                   )}
-                  {user ? (
-                    <>
-                      <span className="text-[#1A1A1A]">{user.email}</span>
-                      <button
-                        onClick={handleLogout}
-                        className="text-sm font-medium text-white bg-[#1E3A8A] hover:bg-[#1A2F6D] px-4 py-2 rounded-md"
-                      >
-                        Logout
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setShowAuthModal(true)}
-                      className="text-sm font-medium text-white bg-[#1E3A8A] hover:bg-[#1A2F6D] px-4 py-2 rounded-md"
-                    >
-                      Login / Signup
-                    </button>
-                  )}
+                  <button className="p-2 rounded-md text-[#1A1A1A] hover:bg-[#F5F5F5]">
+                    <Bell className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('tools');
+                      navigate('/');
+                    }}
+                    className="bg-white border border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#F5F5F5] px-4 py-2 rounded-md flex items-center"
+                  >
+                    <Wrench className="mr-2 h-4 w-4" /> Tools Overview
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        setShowAuthModal(true);
+                      } else {
+                        navigate('/settings');
+                      }
+                    }}
+                    className="p-2 rounded-md text-[#1A1A1A] hover:bg-[#F5F5F5]"
+                  >
+                    <SettingsIcon className="h-5 w-5" />
+                  </button>
                 </div>
               </div>
             </header>
 
             <main className="container mx-auto px-4 py-8">
-              {renderMainContent()}
+              <Routes>
+                <Route path="/" element={renderMainContent()} />
+                <Route
+                  path="/project/:projectId"
+                  element={<ProjectPage user={user} setActiveView={setActiveView} />}
+                />
+                <Route path="/thinkfast/:projectId" element={<ThinkFast user={user} />} />
+                <Route path="/thinkfast" element={<ThinkFast user={user} />} />
+                <Route path="/calendar" element={<CalendarPage user={user} setActiveView={setActiveView} />} />
+                <Route
+                  path="/settings"
+                  element={<Settings user={user} setActiveView={setActiveView} onLogout={handleLogout} />}
+                />
+                <Route path="/login" element={<div>Login Page (Placeholder)</div>} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
             </main>
           </div>
 

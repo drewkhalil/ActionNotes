@@ -1,298 +1,388 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
-import { Switch } from "./ui/switch";
-import { Label } from "./ui/label";
-import { Trash2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { useSubscription } from "../contexts/SubscriptionContext";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AppUser } from '../types/types';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import {
+  LogOut,
+  Trash2,
+  Save,
+} from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import { supabase } from '../lib/supabase';
 
 interface SettingsProps {
-  onLogout: () => void;
+  user: AppUser | null;
+  setActiveView: React.Dispatch<
+    React.SetStateAction<
+      'home' | 'tools' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'studyTechniques'
+    >
+  >;
+  onLogout: () => Promise<void>;
 }
 
-interface UserPreferences {
-  autoSave: boolean;
-  pdfRetentionDays: number;
-}
-
-export function Settings({ onLogout }: SettingsProps) {
-  const { userPlan, totalUsage, maxUsage, setIsUpgradeOpen } = useSubscription();
-  const [user, setUser] = useState<any>(null);
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    autoSave: true,
-    pdfRetentionDays: 30,
-  });
-  const [isClearingHistory, setIsClearingHistory] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+export default function Settings({ user, setActiveView, onLogout }: SettingsProps) {
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
+  const [displayName, setDisplayName] = useState(user?.username || '');
+  const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [logoutAlertOpen, setLogoutAlertOpen] = useState(false);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Error fetching user:", error);
-        setError("Failed to authenticate. Please log in again.");
-        return;
-      }
-      if (user) {
-        setUser(user);
-        fetchPreferences(user.id);
-      } else {
-        alert("You must be logged in to access settings.");
-        window.location.href = '/login';
-      }
-    };
-
-    fetchUser();
-  }, []);
-
-  const fetchPreferences = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("user_preferences")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) {
-        if (error.code === "PGRST116") {
-          // No preferences found, use defaults
-          setPreferences({ autoSave: true, pdfRetentionDays: 30 });
-          return;
-        }
-        throw error;
-      }
-      if (data) {
-        setPreferences({
-          autoSave: data.auto_save ?? true,
-          pdfRetentionDays: data.pdf_retention_days ?? 30,
-        });
-      }
-    } catch (error: any) {
-      console.error("Error fetching preferences:", error);
-      setError("Failed to load preferences. Using default settings.");
-      setPreferences({ autoSave: true, pdfRetentionDays: 30 });
+  // Get the first letter for the profile picture placeholder
+  const getProfileInitial = () => {
+    if (fullName.trim()) {
+      return fullName.trim()[0].toUpperCase();
     }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return 'U'; // Fallback for "User"
   };
 
-  const updatePreferences = async (newPreferences: Partial<UserPreferences>) => {
+  const handleSaveChanges = async () => {
+    if (!user) return;
+
     try {
-      const updatedPreferences = { ...preferences, ...newPreferences };
-      const { error } = await supabase.from("user_preferences").upsert({
-        user_id: user.id,
-        auto_save: updatedPreferences.autoSave,
-        pdf_retention_days: updatedPreferences.pdfRetentionDays,
-        updated_at: new Date().toISOString(),
+      // Update user metadata (full_name, phone) and username (display_name)
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName,
+          phone,
+          username: displayName,
+        },
       });
 
-      if (error) throw error;
-      setPreferences(updatedPreferences);
-    } catch (error: any) {
-      console.error("Error updating preferences:", error);
-      setError("Failed to update preferences.");
-    }
-  };
+      if (updateError) throw updateError;
 
-  const clearUserHistory = async (userId: string) => {
-    try {
-      // Fetch history items to delete associated PDFs
-      const { data: historyItems, error: fetchError } = await supabase
-        .from("history")
-        .select("id, pdf_path")
-        .eq("user_id", userId);
-
-      if (fetchError) throw fetchError;
-
-      // Delete PDFs from storage
-      for (const item of historyItems || []) {
-        if (item.pdf_path) {
-          await supabase.storage.from("history_pdfs").remove([item.pdf_path]);
+      // Update password if provided
+      if (currentPassword && newPassword && confirmNewPassword) {
+        if (newPassword !== confirmNewPassword) {
+          throw new Error('New password and confirmation do not match.');
         }
+
+        // Supabase requires re-authentication to update the password
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email || '',
+          password: currentPassword,
+        });
+
+        if (signInError) throw new Error('Current password is incorrect.');
+
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (passwordError) throw passwordError;
+
+        // Clear password fields after successful update
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
       }
 
-      // Delete history entries
-      const { error: deleteError } = await supabase
-        .from("history")
-        .delete()
-        .eq("user_id", userId);
-
-      if (deleteError) throw deleteError;
-    } catch (error: any) {
-      console.error("Error clearing user history:", error);
-      throw error;
+      setError(null);
+      setHasChanges(false);
+      alert('Changes saved successfully!');
+    } catch (err: any) {
+      console.error('Error saving changes:', err);
+      setError(err.message || 'Failed to save changes. Please try again.');
     }
   };
 
-  const handleClearHistory = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to clear all your history? This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
+  const handleLogout = async () => {
+    await onLogout();
+    setActiveView('home');
+    navigate('/');
+  };
 
-    setIsClearingHistory(true);
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
     try {
-      await clearUserHistory(user.id);
-      alert("History cleared successfully");
-    } catch (error: any) {
-      console.error("Error clearing history:", error);
-      alert("Failed to clear history. Please try again.");
-    } finally {
-      setIsClearingHistory(false);
+      await supabase.auth.signOut();
+      setActiveView('home');
+      navigate('/');
+      alert('Account deletion requested. Please contact support to complete this action.');
+    } catch (err: any) {
+      console.error('Error deleting account:', err);
+      setError(err.message || 'Failed to delete account. Please try again.');
     }
   };
 
-  const handleLogoutClick = async () => {
-    setIsLoggingOut(true);
-    try {
-      await onLogout();
-    } catch (error: any) {
-      console.error("Error during logout:", error);
-      alert("Failed to log out. Please try again.");
-    } finally {
-      setIsLoggingOut(false);
-    }
+  const handleFieldChange = (
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    value: string
+  ) => {
+    setter(value);
+    setHasChanges(true);
   };
 
-  if (!user) {
-    return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <h2 className="text-2xl font-bold">Access Denied</h2>
-          </CardHeader>
-          <CardContent>
-            <p>Please log in to access settings.</p>
-            <Button onClick={() => (window.location.href = '/login')}>
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const handleProfilePictureChange = () => {
+    console.log('Profile picture change clicked');
+  };
+
+  const handleProfilePictureRemove = () => {
+    console.log('Profile picture remove clicked');
+  };
 
   return (
-    <div className="container mx-auto p-4">
-      {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
-          {error}
+    <div className="min-h-screen bg-white flex items-center justify-center py-6 px-4">
+      {/* Main Container */}
+      <div className="w-full max-w-3xl rounded-lg border bg-white p-6">
+        {/* Header */}
+        <header className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">SETTINGS</h1>
+          <Button
+            onClick={handleSaveChanges}
+            disabled={!hasChanges}
+            variant="outline"
+            className="border-gray-300 text-black hover:bg-gray-100 min-w-fit px-4 flex items-center"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            SAVE CHANGES
+          </Button>
+        </header>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {/* Account Information Section */}
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">ACCOUNT INFORMATION</h2>
+        <p className="text-sm text-gray-600 mb-6">Update your account details and preferences.</p>
+
+        {/* Profile Picture */}
+        <div className="flex items-start gap-4 mb-6">
+          <div className="flex items-center justify-center h-16 w-16 rounded-full bg-gray-200 text-white text-2xl font-semibold">
+            {getProfileInitial()}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs font-medium uppercase text-gray-700">
+              PROFILE PICTURE
+            </Label>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleProfilePictureChange}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 min-w-fit px-4"
+              >
+                CHANGE
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleProfilePictureRemove}
+                className="border-red-600 text-red-600 hover:bg-red-50 min-w-fit px-4"
+              >
+                REMOVE
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
-      <Card>
-        <CardHeader>
-          <h2 className="text-2xl font-bold">Settings</h2>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Auto-save Settings */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Auto-save Settings</h3>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="auto-save">Enable Auto-save</Label>
-                <p className="text-sm text-gray-500">
-                  Automatically save your learning sessions as PDFs
-                </p>
-              </div>
-              <Switch
-                id="auto-save"
-                checked={preferences.autoSave}
-                onCheckedChange={(checked) =>
-                  updatePreferences({ autoSave: checked })
-                }
+
+        {/* Account Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+          <div className="space-y-1">
+            <Label htmlFor="full-name" className="text-xs font-medium uppercase text-gray-700">
+              FULL NAME
+            </Label>
+            <div className="rounded-md border border-gray-200">
+              <Input
+                id="full-name"
+                value={fullName}
+                onChange={(e) => handleFieldChange(setFullName, e.target.value)}
+                placeholder="Enter your full name"
+                className="border-0 p-2 shadow-none focus-visible:ring-0 text-sm"
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="retention-days">PDF Retention Period</Label>
-                <p className="text-sm text-gray-500">
-                  Number of days to keep auto-saved PDFs
-                </p>
-              </div>
-              <select
-                id="retention-days"
-                value={preferences.pdfRetentionDays}
-                onChange={(e) =>
-                  updatePreferences({
-                    pdfRetentionDays: Number(e.target.value),
-                  })
-                }
-                className="border rounded-md px-3 py-2 border-gray-300 focus:border-[#F87171] focus:ring-[#F87171] text-gray-900 dark:text-white"
-              >
-                <option value="7">7 days</option>
-                <option value="30">30 days</option>
-                <option value="90">90 days</option>
-                <option value="180">180 days</option>
-                <option value="365">1 year</option>
-              </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="display-name" className="text-xs font-medium uppercase text-gray-700">
+              DISPLAY NAME
+            </Label>
+            <div className="rounded-md border border-gray-200">
+              <Input
+                id="display-name"
+                value={displayName}
+                onChange={(e) => handleFieldChange(setDisplayName, e.target.value)}
+                placeholder="Enter your display name"
+                className="border-0 p-2 shadow-none focus-visible:ring-0 text-sm"
+              />
             </div>
           </div>
-
-          {/* History Management */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">History Management</h3>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Clear History</Label>
-                <p className="text-sm text-gray-500">
-                  Delete all your learning history and saved PDFs
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleClearHistory}
-                disabled={isClearingHistory}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {isClearingHistory ? "Clearing..." : "Clear History"}
-              </Button>
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-xs font-medium uppercase text-gray-700">
+              EMAIL
+            </Label>
+            <div className="rounded-md border border-red-200 p-2">
+              <span className="text-sm text-gray-700">{user?.email || 'Not available'}</span>
             </div>
           </div>
-
-          {/* Account & Subscription Management */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Account</h3>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Email</Label>
-                <p className="text-sm text-gray-500">{user.email}</p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleLogoutClick}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? "Logging out..." : "Logout"}
-              </Button>
+          <div className="space-y-1">
+            <Label htmlFor="phone" className="text-xs font-medium uppercase text-gray-700">
+              PHONE (OPTIONAL)
+            </Label>
+            <div className="rounded-md border border-gray-200">
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => handleFieldChange(setPhone, e.target.value)}
+                placeholder="Enter your phone number"
+                className="border-0 p-2 shadow-none focus-visible:ring-0 text-sm"
+              />
             </div>
+          </div>
+        </div>
 
-            {/* Subscription Plan Info */}
-            <h3 className="text-lg font-semibold mt-6">Subscription</h3>
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 flex justify-between items-center">
+        {/* Logout Button */}
+        <div className="flex justify-end mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setLogoutAlertOpen(true)}
+            className="border-gray-300 text-gray-900 hover:bg-gray-100 min-w-fit px-4 flex items-center"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Log Out
+          </Button>
+        </div>
+
+        {/* Password Section */}
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">PASSWORD</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+          <div className="space-y-1">
+            <Label htmlFor="current-password" className="text-xs font-medium uppercase text-gray-700">
+              CURRENT PASSWORD
+            </Label>
+            <div className="rounded-md border border-gray-200">
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => handleFieldChange(setCurrentPassword, e.target.value)}
+                placeholder="Enter current password"
+                className="border-0 p-2 shadow-none focus-visible:ring-0 text-sm"
+              />
+            </div>
+          </div>
+          <div className="space-y-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="new-password" className="text-xs font-medium uppercase text-gray-700">
+                NEW PASSWORD
+              </Label>
+              <div className="rounded-md border border-gray-200">
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => handleFieldChange(setNewPassword, e.target.value)}
+                  placeholder="Enter new password"
+                  className="border-0 p-2 shadow-none focus-visible:ring-0 text-sm"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="confirm-new-password" className="text-xs font-medium uppercase text-gray-700">
+                CONFIRM NEW PASSWORD
+              </Label>
+              <div className="rounded-md border border-gray-200">
+                <Input
+                  id="confirm-new-password"
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => handleFieldChange(setConfirmNewPassword, e.target.value)}
+                  placeholder="Confirm new password"
+                  className="border-0 p-2 shadow-none focus-visible:ring-0 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Danger Zone Section */}
+        <div>
+          <h2 className="text-xl font-semibold text-red-600 mb-2">DANGER ZONE</h2>
+          <div className="rounded-md border border-red-200 bg-red-50 p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">
-                  <strong>Current Plan:</strong>{" "}
-                  <span className="capitalize">{userPlan}</span>
-                </p>
-                <p className="text-sm text-gray-500">
-                  <strong>Usage:</strong> {totalUsage} /
-                  {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]}{" "}
-                  total uses
+                <p className="text-sm font-medium text-red-600">Delete Account</p>
+                <p className="text-sm text-red-500">
+                  Once you delete your account, there is no going back. Please be certain.
                 </p>
               </div>
               <Button
-                onClick={() => setIsUpgradeOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                variant="secondary"
+                onClick={() => setDeleteAlertOpen(true)}
+                className="bg-red-600 hover:bg-red-700 min-w-fit px-4 flex items-center"
               >
-                Upgrade Plan
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Account
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={logoutAlertOpen} onOpenChange={setLogoutAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be signed out of your account and returned to the login page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Log Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All your data will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

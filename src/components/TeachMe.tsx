@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { Loader2, Crown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Loader2, Crown, Brain, Sparkles, CheckCircle } from "lucide-react";
 import UpgradePopup from "./ui/UpgradePopup";
 import { useSubscription } from "../contexts/SubscriptionContext";
 import OpenAI from "openai";
@@ -106,71 +108,127 @@ const TeachMe: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            TeachMeThat
-          </h2>
-          <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-            <span>
-              {totalUsage}/
-              {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]} uses
-            </span>
-            {userPlan === "free" && (
-              <Button
-                onClick={() => setIsUpgradeOpen(true)}
-                className="flex items-center space-x-1 text-purple-600 hover:text-purple-700"
-                variant="ghost"
-              >
-                <Crown className="h-4 w-4" />
-                <span>Upgrade</span>
-              </Button>
-            )}
+    <div className="min-h-screen bg-white">
+
+      <main className="container px-4 py-6 md:px-6 md:py-8">
+        {/* Tool Header */}
+        <div className="mb-8 flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#E4D7FF]">
+            <Brain className="h-8 w-8 text-[#1E3A8A]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold md:text-3xl">TeachMeThat</h1>
+            <p className="text-gray-600">Transform any topic into an interactive learning experience</p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Enter a topic you want to learn about (e.g., History, 10th, World War II)."
-            className="w-full h-64 mb-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 focus:border-[#C4A7FF] focus:ring-[#C4A7FF]"
-          />
-          <Button
-            onClick={handleSubmit}
-            disabled={isProcessing || !input.trim()}
-            className="w-full bg-[#C4A7FF] hover:bg-[#B794FF] text-white"
-          >
-            {isProcessing ? (
-              <div className="flex items-center justify-center">
-                <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                Generating Lesson...
+        {/* Topic Input Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>What would you like to learn today?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Textarea
+                placeholder="Enter a topic, concept or problem you want to learn (e.g., 'Quantum Physics for Beginners', 'How to solve quadratic equations', 'The history of Renaissance art')"
+                className="min-h-[100px]"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isProcessing || !input.trim()}
+                  className="bg-[#1E3A8A] hover:bg-[#152C6B]"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-pulse" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="mr-2 h-4 w-4" />
+                      <span>Teach Me</span>
+                    </>
+                  )}
+                </Button>
               </div>
-            ) : (
-              "Generate Lesson"
-            )}
-          </Button>
-        </div>
-      </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {lesson && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-300 dark:border-gray-700 prose dark:prose-invert max-w-none leading-relaxed space-y-4">
-          <ReactMarkdown
-            remarkPlugins={[remarkMath]}
-            rehypePlugins={[rehypeMathjax]}
-            className="prose dark:prose-invert"
-          >
-            {lesson}
-          </ReactMarkdown>
-        </div>
-      )}
+        {/* Lesson Output */}
+        {lesson && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Lesson on {input || "Your Topic"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose dark:prose-invert max-w-none leading-relaxed space-y-4">
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeMathjax]}
+                  className="prose dark:prose-invert"
+                >
+                  {lesson}
+                </ReactMarkdown>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      <UpgradePopup
-        isOpen={isUpgradeOpen}
-        onClose={() => setIsUpgradeOpen(false)}
-        onUpgrade={handleUpgrade}
-      />
+        {/* How It Works Section */}
+        {!lesson && !isProcessing && (
+          <div className="mt-12 space-y-6">
+            <h2 className="text-xl font-semibold">How TeachMeThat Works</h2>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card>
+                <CardContent className="flex flex-col items-center p-6 text-center">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#E4D7FF]">
+                    <Brain className="h-6 w-6 text-[#1E3A8A]" />
+                  </div>
+                  <h3 className="mb-2 font-semibold">1. Enter Any Topic</h3>
+                  <p className="text-sm text-gray-600">
+                    Type in any subject or concept you want to learn about, from basic to advanced.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="flex flex-col items-center p-6 text-center">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#E4D7FF]">
+                    <Sparkles className="h-6 w-6 text-[#1E3A8A]" />
+                  </div>
+                  <h3 className="mb-2 font-semibold">2. AI Creates Content</h3>
+                  <p className="text-sm text-gray-600">
+                    Our AI generates a comprehensive learning experience tailored to your needs.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="flex flex-col items-center p-6 text-center">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#E4D7FF]">
+                    <CheckCircle className="h-6 w-6 text-[#1E3A8A]" />
+                  </div>
+                  <h3 className="mb-2 font-semibold">3. Learn Interactively</h3>
+                  <p className="text-sm text-gray-600">
+                    Engage with lessons, interactive elements, quizzes, and additional resources.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        <UpgradePopup
+          isOpen={isUpgradeOpen}
+          onClose={() => setIsUpgradeOpen(false)}
+          onUpgrade={handleUpgrade}
+        />
+      </main>
     </div>
   );
 };

@@ -8,32 +8,16 @@
       http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.stripe.com https://identity.netlify.com;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.stripe.com https://*.stripe.com;
+        script-src-elem 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com https://*.stripe.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        img-src 'self' data: https:;
-        font-src 'self' data: blob: https: https://fonts.gstatic.com;
-        connect-src 'self' https://api.stripe.com https://checkout.stripe.com
-          https://actionnotes-production.up.railway.app/api/create-checkout-session
-          https://actionnotes-production.up.railway.app/api/updateUsage
-          https://models.inference.ai.azure.com https://*.stripe.com
-          https://bmuvsbafvrvsgdplhvgp.supabase.co https://*.supabase.co
-          wss://bmuvsbafvrvsgdplhvgp.supabase.co
-          https://*.googleapis.com img-src 'self' https://*.googleapis.com https://*.gstatic.com;
-          https://openlibrary.org https://cdnjs.cloudflare.com
-          https://actionnotes.netlify.app/.netlify/identity;
-        frame-src 'self' https://*.stripe.com https://checkout.stripe.com;
-        script-src-elem 'self' 'unsafe-inline' https://*.stripe.com https://identity.netlify.com;
+        img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https:;
+        font-src 'self' data: blob: https://fonts.gstatic.com https:;
+        connect-src 'self' https://actionnotes-production.up.railway.app https://models.inference.ai.azure.com https://bmuvsbafvrvsgdplhvgp.supabase.co https://*.supabase.co wss://bmuvsbafvrvsgdplhvgp.supabase.co https://*.googleapis.com https://openlibrary.org https://api.openrouter.ai;
+        media-src 'self' /assets/beep-01a.mp3;
       "
     />
     <title>Action Notes</title>
-    <!-- Netlify Identity script -->
-    <script
-      type="text/javascript"
-      src="https://identity.netlify.com/v1/netlify-identity-widget.js"
-      async
-    ></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js"></script>
   </head>
   <body>
     <div id="root"></div>
