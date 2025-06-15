@@ -7,7 +7,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Card: React.FC<CardProps> = ({ children, className = '', ...props }) => {
   return (
     <div
-      className={`bg-white rounded-lg border border-[#EAEAEA] shadow-sm ${className}`}
+      className={`bg-[#24221e] rounded-lg border border-[#4f4a40] shadow-sm ${className}`}
       {...props}
     >
       {children}
@@ -22,7 +22,7 @@ interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '', ...props }) => {
   return (
     <div
-      className={`border-b border-[#EAEAEA] ${className}`}
+      className={`border-b border-[#4f4a40] ${className}`}
       {...props}
     >
       {children}
@@ -37,7 +37,7 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '', ...props }) => {
   return (
     <h3
-      className={`text-lg font-semibold text-[#1A1A1A] ${className}`}
+      className={`text-lg font-semibold text-white ${className}`}
       {...props}
     >
       {children}
@@ -52,7 +52,7 @@ interface CardDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = '', ...props }) => {
   return (
     <p
-      className={`text-sm text-[#666666] ${className}`}
+      className={`text-sm text-[#b3aea2] ${className}`}
       {...props}
     >
       {children}
@@ -67,7 +67,22 @@ interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
 export const CardContent: React.FC<CardContentProps> = ({ children, className = '', ...props }) => {
   return (
     <div
-      className={`${className}`}
+      className={`p-4 ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+}
+
+export const CardFooter: React.FC<CardFooterProps> = ({ children, className = '', ...props }) => {
+  return (
+    <div
+      className={`border-t border-[#4f4a40] ${className}`}
       {...props}
     >
       {children}

@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
 import { Loader2, Crown } from "lucide-react";
-import UpgradePopup from "./ui/UpgradePopup";
-import { useSubscription } from "../contexts/SubscriptionContext";
+import UpgradePopup from "../ui/UpgradePopup";
 import OpenAI from "openai";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
@@ -20,25 +19,10 @@ const RecapMe: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [summary, setSummary] = useState("");
 
-  const {
-    userPlan,
-    totalUsage,
-    maxUsage,
-    incrementUsage,
-    checkUsageLimit,
-    handleUpgrade,
-    isUpgradeOpen,
-    setIsUpgradeOpen,
-  } = useSubscription();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    if (checkUsageLimit()) {
-      setIsUpgradeOpen(true);
-      return;
-    }
 
     setIsProcessing(true);
     try {
@@ -101,7 +85,7 @@ const RecapMe: React.FC = () => {
       setSummary(
         response.choices[0].message.content ?? "⚠️ No response from AI.",
       );
-      incrementUsage();
+
     } catch (error) {
       console.error("Error generating recap:", error);
       alert("Failed to generate recap. Please try again.");
@@ -118,20 +102,6 @@ const RecapMe: React.FC = () => {
             RecapMe
           </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-            <span>
-              {totalUsage}/
-              {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]} uses
-            </span>
-            {userPlan === "free" && (
-              <Button
-                onClick={() => setIsUpgradeOpen(true)}
-                className="flex items-center space-x-1 text-green-600 hover:text-green-700"
-                variant="ghost"
-              >
-                <Crown className="h-4 w-4" />
-                <span>Upgrade</span>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -172,11 +142,6 @@ const RecapMe: React.FC = () => {
         </div>
       )}
 
-      <UpgradePopup
-        isOpen={isUpgradeOpen}
-        onClose={() => setIsUpgradeOpen(false)}
-        onUpgrade={handleUpgrade}
-      />
     </div>
   );
 };

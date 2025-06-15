@@ -1,13 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Project, Task, AppUser } from '../types/types';
-import {
-  BookOpen, ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, MoreVertical, CheckSquare,
-} from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, MoreVertical, CheckSquare } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -20,23 +16,22 @@ interface CalendarPageProps {
   user: AppUser | null;
   setActiveView: React.Dispatch<
     React.SetStateAction<
-      'home' | 'tools' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'studyTechniques'
+      'home' | 'tools' | 'history' | 'settings' | 'teach' | 'recap' | 'flashcards' | 'quiz' | 'studyTechniques' | 'calendar' | 'projects' | 'analytics'
     >
   >;
 }
 
-export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
+export const CalendarPage: React.FC<CalendarPageProps> = ({ user, setActiveView }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [view, setView] = useState<'month' | 'week' | 'day'>('month');
+  const [nextMonth, setNextMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterProject, setFilterProject] = useState<string>('all');
-  const [newTask, setNewTask] = useState('');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
   const [newTaskProject, setNewTaskProject] = useState<string>('');
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) {
@@ -47,7 +42,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch projects
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
           .select('*')
@@ -55,7 +49,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
         if (projectsError) throw projectsError;
         setProjects(projectsData || []);
 
-        // Fetch all tasks
         const { data: tasksData, error: tasksError } = await supabase
           .from('tasks')
           .select('*, projects(name, logo, color)')
@@ -72,17 +65,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
     fetchData();
   }, [user]);
 
-  // Helper functions for calendar
   const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    return new Date(year, month + 1, 0).getDate();
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
   const getFirstDayOfMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    return new Date(year, month, 1).getDay();
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
   const formatMonth = (date: Date) => {
@@ -91,14 +79,17 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
 
   const prevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    setNextMonth(new Date(nextMonth.getFullYear(), nextMonth.getMonth() - 1, 1));
   };
 
-  const nextMonth = () => {
+  const handleNextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    setNextMonth(new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 1));
   };
 
   const goToToday = () => {
     setCurrentMonth(new Date());
+    setNextMonth(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
   };
 
   const getTasksForDate = (date: string) => {
@@ -128,7 +119,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
   };
 
   const addNewTask = async () => {
-    if (!user || !newTask.trim() || !newTaskProject || !newTaskDueDate) {
+    if (!user || !newTaskTitle.trim() || !newTaskProject || !newTaskDueDate) {
       alert('Please provide a task title, project, and due date.');
       return;
     }
@@ -137,7 +128,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
         .from('tasks')
         .insert({
           project_id: newTaskProject,
-          title: newTask,
+          title: newTaskTitle,
           due_date: newTaskDueDate.toISOString(),
           completed: false,
         })
@@ -145,7 +136,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
         .single();
       if (error) throw error;
       setTasks([...tasks, data]);
-      setNewTask('');
+      setNewTaskTitle('');
       setNewTaskDueDate(null);
       setNewTaskProject('');
       setIsAddTaskOpen(false);
@@ -155,54 +146,42 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
     }
   };
 
-  // Generate calendar days for month view
-  const generateCalendarDays = () => {
-    const daysInMonth = getDaysInMonth(currentMonth);
-    const firstDayOfMonth = getFirstDayOfMonth(currentMonth);
+  const generateCalendarDays = (date: Date, calendarIndex: number) => {
+    const daysInMonth = getDaysInMonth(date);
+    const firstDayOfMonth = getFirstDayOfMonth(date);
     const days = [];
 
-    // Add empty cells for days before the first day of the month
+    // Generate placeholder days
     for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} className="h-24 border border-gray-200 bg-gray-50"></div>);
+      days.push(
+        <div
+          key={`empty-${date.getFullYear()}-${date.getMonth()}-${i}-${calendarIndex}`}
+          className="h-12 w-full"
+        ></div>
+      );
     }
 
-    // Add cells for each day of the month
+    // Generate days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-      const dateString = date.toISOString().split('T')[0];
+      const currentDate = new Date(date.getFullYear(), date.getMonth(), day);
+      const dateString = currentDate.toISOString().split('T')[0];
       const tasksForDay = getTasksForDate(dateString);
+      const isToday = currentDate.toDateString() === new Date().toDateString();
 
       days.push(
-        <div key={day} className="h-24 border border-gray-200 p-1">
-          <div className="flex justify-between">
-            <span className={`text-sm font-medium ${date.getDay() === 0 || date.getDay() === 6 ? 'text-red-500' : ''}`}>
-              {day}
-            </span>
+        <button
+          key={`day-${date.getFullYear()}-${date.getMonth()}-${day}-${calendarIndex}`}
+          className="h-12 w-full text-white text-sm font-medium relative"
+        >
+          <div className={`flex size-full items-center justify-center rounded-full ${isToday ? 'bg-[#c6a351] text-[#161512]' : ''}`}>
+            {day}
             {tasksForDay.length > 0 && (
-              <Badge className="text-xs">
+              <span className="absolute top-0 right-0 text-xs bg-[#35322c] rounded-full h-4 w-4 flex items-center justify-center">
                 {tasksForDay.length}
-              </Badge>
+              </span>
             )}
           </div>
-          <div className="mt-1 space-y-1 overflow-y-auto">
-            {tasksForDay.slice(0, 2).map((task) => {
-              const TaskIcon = logos.find(logo => logo.name === task.projects?.logo)?.icon || BookOpen;
-              const projectColorClass = colorOptions.find(c => c.value === task.projects?.color)?.bgClass || 'bg-emerald-500';
-              return (
-                <div
-                  key={task.id}
-                  className={`flex items-center rounded px-1 py-0.5 text-xs ${
-                    task.completed ? 'bg-gray-100 text-gray-500 line-through' : `${projectColorClass} bg-opacity-20`
-                  }`}
-                >
-                  <TaskIcon className="h-3 w-3" />
-                  <span className="ml-1 truncate">{task.title}</span>
-                </div>
-              );
-            })}
-            {tasksForDay.length > 2 && <div className="text-xs text-gray-500">+{tasksForDay.length - 2} more</div>}
-          </div>
-        </div>
+        </button>
       );
     }
 
@@ -210,82 +189,65 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
   };
 
   if (loading) {
-    return <div className="text-center text-text">Loading...</div>;
+    return <div className="text-center text-[#b3aea2]">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="container px-4 py-6 md:px-6 md:py-8">
-        {/* Calendar Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold md:text-3xl">Calendar</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsAddTaskOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Task
-            </Button>
-          </div>
+    <div className="min-h-screen bg-[#161512] text-white font-manrope">
+      <main className="px-4 py-6">
+        {/* Header */}
+        <div className="flex flex-wrap justify-between gap-3 p-4">
+          <p className="text-white tracking-tight text-[32px] font-bold leading-tight min-w-72">Calendar</p>
+          <Button
+            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 bg-[#c6a351] text-[#161512] text-sm font-bold"
+            onClick={() => setIsAddTaskOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="truncate">Add Task</span>
+          </Button>
         </div>
-
-        {/* Calendar Controls */}
-        <Card className="mb-6">
-          <CardContent className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={prevMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <h2 className="text-lg font-medium">{formatMonth(currentMonth)}</h2>
-              <Button variant="outline" size="icon" onClick={nextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-4">
-              <Select value={view} onValueChange={(value: 'month' | 'week' | 'day') => setView(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="View" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="day">Day</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm" onClick={goToToday}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                Today
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Calendar View */}
-        <Card>
-          <CardContent className="p-0">
-            {view === 'month' && (
-              <div>
-                <div className="grid grid-cols-7 border-b bg-gray-50">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                    <div key={day} className="p-2 text-center text-sm font-medium">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7">{generateCalendarDays()}</div>
+        {/* Calendars */}
+        <div className="flex flex-wrap items-center justify-center gap-6 p-4">
+          {[currentMonth, nextMonth].map((month, index) => (
+            <div key={`calendar-${month.getFullYear()}-${month.getMonth()}`} className="flex min-w-72 max-w-[336px] flex-1 flex-col gap-0.5">
+              <div className="flex items-center p-1 justify-between">
+                {index === 0 && (
+                  <Button className="bg-transparent text-white hover:bg-[#35322c]" onClick={prevMonth}>
+                    <ChevronLeft size={18} />
+                  </Button>
+                )}
+                <p className="text-white text-base font-bold leading-tight flex-1 text-center">
+                  {formatMonth(month)}
+                </p>
+                {index === 1 && (
+                  <Button className="bg-transparent text-white hover:bg-[#35322c]" onClick={handleNextMonth}>
+                    <ChevronRight size={18} />
+                  </Button>
+                )}
               </div>
-            )}
-            {/* Week and Day views can be implemented similarly if needed */}
-          </CardContent>
-        </Card>
-
-        {/* Task List */}
-        <div className="mt-8">
+              <div className="grid grid-cols-7">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+                  <p
+                    key={`weekday-${day}-${index}`}
+                    className="text-white text-[13px] font-bold leading-normal tracking-[0.015em] flex h-12 w-full items-center justify-center pb-0.5"
+                  >
+                    {day}
+                  </p>
+                ))}
+                {generateCalendarDays(month, index)}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Upcoming Tasks */}
+        <div className="mt-8 px-4">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Upcoming Tasks</h2>
+            <h2 className="text-white text-[22px] font-bold leading-tight tracking-[-0.015em]">Upcoming Tasks</h2>
             <Select value={filterProject} onValueChange={setFilterProject}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40 bg-[#24221e] border-[#4f4a40] text-white">
                 <SelectValue placeholder="Filter by project" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#24221e] border-[#4f4a40] text-white">
                 <SelectItem value="all">All Projects</SelectItem>
                 {projects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
@@ -293,42 +255,36 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
               </SelectContent>
             </Select>
           </div>
-
-          <Card>
+          <Card className="bg-[#161512] border-[#4f4a40]">
             <CardContent className="p-0">
-              <div className="divide-y">
+              <div className="divide-y divide-[#4f4a40]">
                 {tasks
                   .filter((task) => filterProject === 'all' || task.project_id === filterProject)
                   .filter((task) => !task.completed)
-                  .sort((a, b) => new Date(a.due_date || '').getTime() - new Date(b.due_date || '').getTime())
+                  .sort((a, b) => new Date(a.due_date || '9999-12-31').getTime() - new Date(b.due_date || '9999-12-31').getTime())
                   .map((task) => {
                     const TaskIcon = logos.find(logo => logo.name === task.projects?.logo)?.icon || BookOpen;
-                    const projectColorClass = colorOptions.find(c => c.value === task.projects?.color)?.bgClass || 'bg-emerald-500';
+                    const projectColorClass = colorOptions.find(c => c.value === task.projects?.color)?.bgClass || 'bg-[#c6a351]';
                     return (
-                      <div key={task.id} className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id={`list-task-${task.id}`}
-                            checked={task.completed}
-                            onCheckedChange={() => toggleTaskCompletion(task.id)}
-                          />
-                          <div>
-                            <label htmlFor={`list-task-${task.id}`} className="font-medium">
-                              {task.title}
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <Badge className={`flex items-center gap-1 ${projectColorClass} bg-opacity-20`}>
-                                <TaskIcon className="h-4 w-4" />
-                                <span className="text-xs">{task.projects?.name || 'Unknown Project'}</span>
-                              </Badge>
-                            </div>
+                      <div key={task.id} className="flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="text-white flex items-center justify-center rounded-lg bg-[#35322c] shrink-0 size-12">
+                            <CheckSquare
+                              size={24}
+                              className={task.completed ? 'text-[#c6a351]' : 'text-white'}
+                              onClick={() => toggleTaskCompletion(task.id)}
+                            />
+                          </div>
+                          <div className="flex flex-col justify-center">
+                            <p className="text-white text-base font-medium leading-normal line-clamp-1">{task.title}</p>
+                            <p className="text-[#b3aea2] text-sm font-normal leading-normal line-clamp-2">{task.projects?.name || 'Unknown Project'}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="text-xs">
+                        <div className="shrink-0 flex items-center gap-2">
+                          <Badge className={`text-xs ${projectColorClass} bg-opacity-20 text-white`}>
                             Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
                           </Badge>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button className="h-8 w-8 bg-[#35322c] text-white">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </div>
@@ -340,23 +296,22 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
           </Card>
         </div>
       </main>
-
       {/* Add Task Popover */}
       <Popover open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-        <PopoverContent className="w-80 p-4 bg-white border rounded-md shadow-lg">
+        <PopoverContent className="w-80 p-4 bg-[#24221e] border-[#4f4a40] rounded-md shadow-lg">
           <div className="space-y-4">
-            <h3 className="font-semibold">Add New Task</h3>
+            <h3 className="font-semibold text-white">Add New Task</h3>
             <Input
               placeholder="Task title"
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              className="border-gray-300"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              className="bg-[#35322c] border-[#4f4a40] text-white placeholder-[#b3aea2]"
             />
             <Select value={newTaskProject} onValueChange={setNewTaskProject}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-[#35322c] border-[#4f4a40] text-white">
                 <SelectValue placeholder="Select project" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#24221e] border-[#4f4a40] text-white">
                 {projects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                 ))}
@@ -364,12 +319,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
             </Select>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {newTaskDueDate ? newTaskDueDate.toLocaleDateString() : 'Select due date'}
+                <Button className="w-full flex justify-between bg-[#35322c] border-[#4f4a40] text-white">
+                  <span>{newTaskDueDate ? newTaskDueDate.toLocaleDateString() : 'Select due date'}</span>
+                  <CalendarIcon className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-2 bg-white border rounded-md shadow-lg">
+              <PopoverContent className="w-auto p-2 bg-[#24221e] border-[#4f4a40] rounded-md shadow-lg">
                 <CalendarComponent
                   onChange={(value: any) => {
                     if (Array.isArray(value)) {
@@ -379,13 +334,30 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ user }) => {
                     }
                   }}
                   value={newTaskDueDate}
-                  className="border-0"
+                  className="border-0 text-white bg-[#24221e]"
                 />
               </PopoverContent>
             </Popover>
-            <Button onClick={addNewTask} disabled={!newTask.trim() || !newTaskProject || !newTaskDueDate}>
-              Add Task
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                className="bg-[#35322c] text-white hover:bg-[#4f4a40]"
+                onClick={() => {
+                  setIsAddTaskOpen(false);
+                  setNewTaskTitle('');
+                  setNewTaskDueDate(null);
+                  setNewTaskProject('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#c6a351] text-[#161512] hover:bg-[#b5923e]"
+                onClick={addNewTask}
+                disabled={!newTaskTitle.trim() || !newTaskProject || !newTaskDueDate}
+              >
+                Add Task
+              </Button>
+            </div>
           </div>
         </PopoverContent>
       </Popover>

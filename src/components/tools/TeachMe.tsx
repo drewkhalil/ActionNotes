@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
 import { Loader2, Crown, Brain, Sparkles, CheckCircle } from "lucide-react";
-import UpgradePopup from "./ui/UpgradePopup";
-import { useSubscription } from "../contexts/SubscriptionContext";
 import OpenAI from "openai";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
@@ -22,25 +20,11 @@ const TeachMe: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lesson, setLesson] = useState("");
 
-  const {
-    userPlan,
-    totalUsage,
-    maxUsage,
-    incrementUsage,
-    checkUsageLimit,
-    handleUpgrade,
-    isUpgradeOpen,
-    setIsUpgradeOpen,
-  } = useSubscription();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    if (checkUsageLimit()) {
-      setIsUpgradeOpen(true);
-      return;
-    }
 
     setIsProcessing(true);
     try {
@@ -98,7 +82,7 @@ const TeachMe: React.FC = () => {
       setLesson(
         response.choices[0].message.content ?? "⚠️ No response from AI.",
       );
-      incrementUsage();
+      
     } catch (error) {
       console.error("Error generating lesson:", error);
       alert("Failed to generate lesson. Please try again.");
@@ -222,12 +206,6 @@ const TeachMe: React.FC = () => {
             </div>
           </div>
         )}
-
-        <UpgradePopup
-          isOpen={isUpgradeOpen}
-          onClose={() => setIsUpgradeOpen(false)}
-          onUpgrade={handleUpgrade}
-        />
       </main>
     </div>
   );

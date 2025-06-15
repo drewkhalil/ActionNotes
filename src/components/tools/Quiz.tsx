@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
 import { Loader2, Eye, Crown } from "lucide-react";
-import UpgradePopup from "./ui/UpgradePopup";
-import { useSubscription } from "../contexts/SubscriptionContext";
+import UpgradePopup from "../ui/UpgradePopup";
 import "./Quiz.css";
 import OpenAI from "openai";
 
@@ -43,17 +42,6 @@ const Quiz: React.FC = () => {
   ]);
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
 
-  const {
-    userPlan,
-    totalUsage,
-    maxUsage,
-    incrementUsage,
-    checkUsageLimit,
-    handleUpgrade,
-    isUpgradeOpen,
-    setIsUpgradeOpen,
-  } = useSubscription();
-
   const handleQuestionTypeChange = (
     type: "multiple-choice" | "short-answer" | "problem-solving",
     value: number,
@@ -69,10 +57,6 @@ const Quiz: React.FC = () => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    if (checkUsageLimit()) {
-      setIsUpgradeOpen(true);
-      return;
-    }
 
     setIsProcessing(true);
     try {
@@ -176,7 +160,7 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
             isRevealed: false,
           })),
         );
-        incrementUsage();
+      
       } catch (parseError) {
         console.error("Error parsing JSON:", parseError);
         throw new Error(
@@ -207,20 +191,6 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
             QuickQuizzes
           </h2>
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-            <span>
-              {totalUsage}/
-              {maxUsage[userPlan] === Infinity ? "∞" : maxUsage[userPlan]} uses
-            </span>
-            {userPlan === "free" && (
-              <Button
-                onClick={() => setIsUpgradeOpen(true)}
-                className="flex items-center space-x-1 text-red-600 hover:text-red-700"
-                variant="ghost"
-              >
-                <Crown className="h-4 w-4" />
-                <span>Upgrade</span>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -375,12 +345,6 @@ Return ONLY a JSON array of questions without any markdown formatting or code bl
           ))}
         </div>
       )}
-
-      <UpgradePopup
-        isOpen={isUpgradeOpen}
-        onClose={() => setIsUpgradeOpen(false)}
-        onUpgrade={handleUpgrade}
-      />
     </div>
   );
 };

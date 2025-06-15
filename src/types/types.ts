@@ -13,9 +13,9 @@ export interface Project {
   user_id: string;
   name: string;
   description?: string;
-  color?: string;
   logo?: string;
-  created_at: string;
+  color?: string;
+  created_at?: string;
   updated_at?: string;
 }
 
@@ -34,14 +34,37 @@ export interface Note {
   created_at: string;
 }
 
+export interface Task {
+  id: string
+  project_id: string
+  title: string
+  due_date: string | null
+  status: 'Not Started' | 'In Progress' | 'Completed'
+  priority?: 'High' | 'Medium' | 'Low'
+  created_at?: string
+  projects?: {
+    name: string
+    logo?: string
+    color: string
+  }
+}
+
 export interface ProjectFile {
-  id: string;
-  project_id: string;
-  file_name: string;
-  file_url: string;
-  file_type: string;
-  file_size?: number; // Add this field (in bytes)
-  created_at: string;
+  id: string
+  project_id: string
+  file_name: string
+  file_path: string
+  uploaded_by: string
+  created_at: string
+  size: number
+}
+
+export interface ToolHistory {
+  id: string
+  project_id: string
+  tool_name: string
+  title: string
+  created_at: string
 }
 
 export interface ProjectDoc {
@@ -77,6 +100,8 @@ export interface Task {
   title: string;
   due_date: string | null;
   completed: boolean;
+  priority?: 'High' | 'Medium' | 'Low';
+  completion_percentage?: 0 | 25 | 50 | 75 | 100;
   created_at?: string;
   projects?: {
     name: string;
@@ -84,3 +109,4 @@ export interface Task {
     color: string;
   };
 }
+
